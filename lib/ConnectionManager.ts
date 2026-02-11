@@ -2,16 +2,10 @@ import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import type { DatabaseAdapter, DatabaseType, Session } from './types';
 import { PostgresAdapter, MongoAdapter, MySQLAdapter } from './adapters';
 import { logger } from './logger';
-import { SESSION_TIMEOUT_MS, SESSION_CLEANUP_INTERVAL_MS } from './config/constants';
 
 class ConnectionManager {
   private sessions: Map<string, Session> = new Map();
   private userSessions: Map<string, string> = new Map();
-  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
-
-  constructor() {
-    this.startCleanupInterval();
-  }
 
   async createSession(
     type: DatabaseType,
@@ -194,20 +188,6 @@ class ConnectionManager {
     return undefined;
   }
 
-  private startCleanupInterval(): void {
-    if (this.cleanupInterval) return;
-
-    this.cleanupInterval = setInterval(() => {
-    }, SESSION_CLEANUP_INTERVAL_MS);
-  }
-
-  stopCleanupInterval(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null;
-    }
-  }
-
   async closeAllSessions(): Promise<void> {
     for (const [id] of this.sessions) {
       await this.closeSession(id);
@@ -230,7 +210,6 @@ if (!globalForConnectionManager.__connectionManagerHandlersRegistered) {
 
   const shutdown = async () => {
     try {
-      connectionManager.stopCleanupInterval();
       await connectionManager.closeAllSessions();
     } catch (error) {
       logger.error('Error during graceful shutdown', error);

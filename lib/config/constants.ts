@@ -3,12 +3,6 @@
  * Timeouts and limits can be overridden via environment variables where applicable.
  */
 
-/** Session idle timeout before cleanup (ms). Default: 30 minutes. */
-export const SESSION_TIMEOUT_MS = Number(process.env.SESSION_TIMEOUT_MS) || 30 * 60 * 1000;
-
-/** Interval for session cleanup check (ms). Default: 1 minute. */
-export const SESSION_CLEANUP_INTERVAL_MS = 60 * 1000;
-
 /** Maximum allowed query length (characters). */
 export const MAX_QUERY_LENGTH = Number(process.env.MAX_QUERY_LENGTH) || 100_000;
 
