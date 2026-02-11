@@ -197,18 +197,7 @@ class ConnectionManager {
   private startCleanupInterval(): void {
     if (this.cleanupInterval) return;
 
-    this.cleanupInterval = setInterval(async () => {
-      const now = Date.now();
-      const toClose: string[] = [];
-      for (const [id, session] of this.sessions) {
-        if (now - session.lastActivity.getTime() > SESSION_TIMEOUT_MS) {
-          toClose.push(id);
-        }
-      }
-      for (const id of toClose) {
-        logger.info('Session timed out, closing', { sessionId: id });
-        await this.closeSession(id);
-      }
+    this.cleanupInterval = setInterval(() => {
     }, SESSION_CLEANUP_INTERVAL_MS);
   }
 
