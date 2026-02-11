@@ -1,4 +1,5 @@
 import type { Document } from 'mongodb';
+import { ObjectId, Long } from 'mongodb';
 
 export interface ParsedMongoChain {
   name: string;
@@ -67,23 +68,90 @@ const splitByTopLevelDots = (input: string): string[] => {
   return parts;
 };
 
+const reviveMongoTypes = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((v) => reviveMongoTypes(v));
+  }
+
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+
+    // Internal markers for special MongoDB types inserted during parsing
+    if (Object.keys(obj).length === 1 && typeof obj.__$oid === 'string') {
+      try {
+        return new ObjectId(obj.__$oid);
+      } catch {
+        return value;
+      }
+    }
+
+    if (Object.keys(obj).length === 1 && typeof obj.__$date === 'string') {
+      const time = Date.parse(obj.__$date);
+      if (Number.isNaN(time)) return value;
+      return new Date(time);
+    }
+
+    if (Object.keys(obj).length === 1 && typeof obj.__$numberLong === 'string') {
+      try {
+        return Long.fromString(obj.__$numberLong);
+      } catch {
+        return value;
+      }
+    }
+
+    if (typeof obj.__$regex === 'string') {
+      const pattern = obj.__$regex;
+      const flags = typeof obj.__$options === 'string' ? obj.__$options : '';
+      try {
+        return new RegExp(pattern, flags);
+      } catch {
+        return value;
+      }
+    }
+
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(obj)) {
+      out[key] = reviveMongoTypes(v);
+    }
+    return out;
+  }
+
+  return value;
+};
+
 export function parseMongoArgs(argsStr: string): unknown[] {
   if (!argsStr.trim()) return [];
 
   try {
     let normalized = argsStr.trim();
 
+    // Convert regex literals /pattern/flags into a JSON-friendly marker object.
     normalized = normalized.replace(
       /\/((?:[^/\\]|\\.)+)\/([gimsu]*)(?=\s*[,}\]]|$)/g,
-      (_match, pattern) => {
+      (_match, pattern, flags) => {
         const escapedPattern = pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        return `"${escapedPattern}"`;
+        const escapedFlags = String(flags ?? '');
+        return `{"__$regex":"${escapedPattern}","__$options":"${escapedFlags}"}`;
       },
     );
 
-    normalized = normalized.replace(/ObjectId\s*\(\s*["']([^"']+)["']\s*\)/g, '"$1"');
-    normalized = normalized.replace(/ISODate\s*\(\s*["']([^"']+)["']\s*\)/g, '{"$date":"$1"}');
-    normalized = normalized.replace(/NumberLong\s*\(\s*["']?(\d+)["']?\s*\)/g, '$1');
+    // Convert ObjectId("...") into a marker that we later revive to a real ObjectId instance.
+    normalized = normalized.replace(
+      /ObjectId\s*\(\s*["']([^"']+)["']\s*\)/g,
+      (_match, id) => `{"__$oid":"${id}"}`,
+    );
+
+    // Convert ISODate("...") into a marker we later revive to a JS Date.
+    normalized = normalized.replace(
+      /ISODate\s*\(\s*["']([^"']+)["']\s*\)/g,
+      (_match, date) => `{"__$date":"${date}"}`,
+    );
+
+    // Convert NumberLong("...") into a marker we later revive to a Long instance.
+    normalized = normalized.replace(
+      /NumberLong\s*\(\s*["']?(\d+)["']?\s*\)/g,
+      (_match, num) => `{"__$numberLong":"${num}"}`,
+    );
 
     normalized = normalized.replace(/'([^'\\]*(\\.[^'\\]*)*)'/g, (_match, content) => {
       return `"${content.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -92,12 +160,13 @@ export function parseMongoArgs(argsStr: string): unknown[] {
     normalized = normalized.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
 
     try {
-      const parsed = JSON.parse(normalized);
+      const parsed = reviveMongoTypes(JSON.parse(normalized));
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch {
       try {
         const arrayStr = normalized.startsWith('[') ? normalized : `[${normalized}]`;
-        return JSON.parse(arrayStr);
+        const parsed = reviveMongoTypes(JSON.parse(arrayStr));
+        return Array.isArray(parsed) ? parsed : [parsed];
       } catch {
         const args: unknown[] = [];
         let depth = 0;
@@ -125,7 +194,7 @@ export function parseMongoArgs(argsStr: string): unknown[] {
 
             if (char === ',' && depth === 0) {
               if (currentArg.trim()) {
-                args.push(JSON.parse(currentArg.trim()));
+                args.push(reviveMongoTypes(JSON.parse(currentArg.trim())));
               }
               currentArg = '';
               continue;
@@ -136,10 +205,10 @@ export function parseMongoArgs(argsStr: string): unknown[] {
         }
 
         if (currentArg.trim()) {
-          args.push(JSON.parse(currentArg.trim()));
+          args.push(reviveMongoTypes(JSON.parse(currentArg.trim())));
         }
 
-        return args.length > 0 ? args : [JSON.parse(normalized)];
+        return args.length > 0 ? args : [reviveMongoTypes(JSON.parse(normalized))];
       }
     }
   } catch (e) {
