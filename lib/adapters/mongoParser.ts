@@ -227,6 +227,14 @@ const parseCallSegment = (segment: string): ParsedMongoChain => {
   const closeIndex = trimmed.lastIndexOf(')');
 
   if (openIndex === -1 || closeIndex === -1 || closeIndex < openIndex) {
+    const bareSegment = segment.trim();
+
+    if (bareSegment === 'length') {
+      throw new Error(
+        'Invalid MongoDB call segment: length. Property access like `.length` is not supported in this environment. To count documents, use db.collection.countDocuments(filter) instead.',
+      );
+    }
+
     throw new Error(`Invalid MongoDB call segment: ${segment}`);
   }
 

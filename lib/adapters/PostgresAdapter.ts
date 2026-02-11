@@ -12,6 +12,24 @@ import { logger } from '../logger';
 import { applySqlPagination } from './sqlUtils';
 import { loadDefaultDatabases } from '../config/databaseConfig';
 
+const getPostgresDeprecatedQueryMessage = (query: string): string | null => {
+  const normalized = query.toUpperCase();
+
+  if (/\bPG_START_BACKUP\s*\(/.test(normalized)) {
+    return 'PostgreSQL removed the exclusive backup function pg_start_backup(). Use pg_backup_start() with the non-exclusive backup API instead.';
+  }
+
+  if (/\bPG_STOP_BACKUP\s*\(/.test(normalized)) {
+    return 'PostgreSQL removed the exclusive backup function pg_stop_backup(). Use pg_backup_stop() with the non-exclusive backup API instead.';
+  }
+
+  if (/\bPG_BACKUP_START_TIME\s*\(/.test(normalized) || /\bPG_IS_IN_BACKUP\s*\(/.test(normalized)) {
+    return 'PostgreSQL removed functions pg_backup_start_time() and pg_is_in_backup() along with exclusive backup mode. Use the newer non-exclusive backup functions pg_backup_start() and pg_backup_stop(), or higher-level backup tools, instead.';
+  }
+
+  return null;
+};
+
 const { Pool } = pg;
 
 const PG_TYPE_MAP: Record<number, string> = {
@@ -146,6 +164,11 @@ export class PostgresAdapter implements DatabaseAdapter {
           destructiveCheck.operation || 'destructive operation',
         );
       }
+    }
+
+    const deprecatedMessage = getPostgresDeprecatedQueryMessage(query);
+    if (deprecatedMessage) {
+      throw new Error(deprecatedMessage);
     }
 
     const startTime = Date.now();

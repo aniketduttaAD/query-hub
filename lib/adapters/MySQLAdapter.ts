@@ -12,6 +12,28 @@ import { logger } from '../logger';
 import { applySqlPagination } from './sqlUtils';
 import { loadDefaultDatabases } from '../config/databaseConfig';
 
+const getMySqlDeprecatedQueryMessage = (query: string): string | null => {
+  const normalized = query.toUpperCase();
+
+  if (/\bSQL_CALC_FOUND_ROWS\b/.test(normalized)) {
+    return 'MySQL deprecated SQL_CALC_FOUND_ROWS in SELECT queries. Remove SQL_CALC_FOUND_ROWS and instead run a separate SELECT COUNT(*) query (or use COUNT(*) OVER() in supported versions) to get the total row count.';
+  }
+
+  if (/\bSHOW\s+PROFILES?\b/.test(normalized)) {
+    return 'MySQL deprecated SHOW PROFILE(S). Use Performance Schema views (for example, performance_schema.events_statements_history) or EXPLAIN/EXPLAIN ANALYZE instead to inspect query performance.';
+  }
+
+  if (/\bZEROFILL\b/.test(normalized)) {
+    return 'MySQL deprecated the ZEROFILL attribute for numeric columns. Store plain numeric values and format them on read (for example using LPAD or FORMAT) instead of relying on ZEROFILL.';
+  }
+
+  if (/\bYEAR\s*\(\s*2\s*\)/.test(normalized)) {
+    return 'MySQL deprecated the YEAR(2) data type. Use YEAR(4) (simply YEAR) and store full four-digit years instead of two-digit years.';
+  }
+
+  return null;
+};
+
 /** Whitelist: only these characters are allowed in database names to prevent SQL injection. */
 const MYSQL_IDENTIFIER_REGEX = /^[a-zA-Z0-9_]+$/;
 
@@ -188,6 +210,11 @@ export class MySQLAdapter implements DatabaseAdapter {
           destructiveCheck.operation || 'destructive operation',
         );
       }
+    }
+
+    const deprecatedMessage = getMySqlDeprecatedQueryMessage(query);
+    if (deprecatedMessage) {
+      throw new Error(deprecatedMessage);
     }
 
     const startTime = Date.now();

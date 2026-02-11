@@ -28,10 +28,38 @@ import {
 import { parseMongoQuery, normalizeMongoDoc } from './mongoParser';
 import { loadDefaultDatabases } from '../config/databaseConfig';
 
-/**
- * Each session gets its own MongoClient. The driver pools connections internally per client.
- * For very high concurrency to the same URL, consider a shared client pool keyed by URL.
- */
+const getDeprecatedCollectionOperationMessage = (
+  operation: string,
+  collectionName: string,
+): string | null => {
+  const op = operation.toLowerCase();
+  const coll = collectionName || 'collection';
+
+  switch (op) {
+    case 'findandmodify':
+      return `The method db.${coll}.findAndModify() is deprecated in modern MongoDB shells. Use db.${coll}.findOneAndUpdate(), db.${coll}.findOneAndDelete(), or db.${coll}.findOneAndReplace() instead, depending on your use case.`;
+    case 'group':
+      return `The method db.${coll}.group() is deprecated. Use the aggregation pipeline with db.${coll}.aggregate([ { $group: { ... } } ]) instead.`;
+    case 'mapreduce':
+      return `The method db.${coll}.mapReduce() is deprecated in modern MongoDB. Rewrite this operation using the aggregation pipeline (for example with $group, $merge, $accumulator, or $function) instead of mapReduce.`;
+    case 'insert':
+      return `The method db.${coll}.insert() is deprecated in modern MongoDB shells. Use db.${coll}.insertOne(doc) or db.${coll}.insertMany([doc1, doc2]) instead.`;
+    case 'update':
+      return `The method db.${coll}.update() is deprecated in modern MongoDB shells. Use db.${coll}.updateOne(filter, update, options), db.${coll}.updateMany(filter, update, options), or db.${coll}.findOneAndUpdate(filter, update, options) instead.`;
+    case 'remove':
+      return `The method db.${coll}.remove() is deprecated in modern MongoDB shells. Use db.${coll}.deleteOne(filter), db.${coll}.deleteMany(filter), or db.${coll}.findOneAndDelete(filter) instead.`;
+    case 'save':
+      return `The method db.${coll}.save() is deprecated in modern MongoDB shells. Use db.${coll}.insertOne(doc), db.${coll}.insertMany(docs), or an upsert with db.${coll}.updateOne(filter, update, { upsert: true }) or db.${coll}.replaceOne(filter, doc, { upsert: true }) instead.`;
+    case 'ensureindex':
+      return `The method db.${coll}.ensureIndex() is deprecated in modern MongoDB shells. Use db.${coll}.createIndex(indexSpec, options) or db.${coll}.createIndexes([...]) instead.`;
+    case 'copyto':
+      return `The method db.${coll}.copyTo() is deprecated in modern MongoDB shells. Use an aggregation pipeline with $out or $merge to write results to another collection instead.`;
+    default:
+      return null;
+  }
+};
+
+
 export class MongoAdapter implements DatabaseAdapter {
   private client: MongoClient | null = null;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -255,6 +283,14 @@ export class MongoAdapter implements DatabaseAdapter {
                 hasSkip = true;
               } else if (name === 'project') {
                 cursor.project(normalizeMongoDoc(chain.args[0]));
+              } else if (name === 'count') {
+                throw new Error(
+                  'Unsupported cursor method: count. The cursor.count() helper is deprecated in modern MongoDB drivers. Instead, use db.collection.countDocuments(filter) or db.collection.estimatedDocumentCount() on the collection.',
+                );
+              } else if (name === 'toarray') {
+                throw new Error(
+                  'Unsupported cursor method: toArray. This tool already materializes the cursor for you; remove the explicit .toArray() call from your query.',
+                );
               } else {
                 throw new Error(`Unsupported cursor method: ${chain.name}`);
               }
@@ -627,8 +663,16 @@ export class MongoAdapter implements DatabaseAdapter {
             break;
           }
 
-          default:
+          default: {
+            const deprecatedMessage = getDeprecatedCollectionOperationMessage(
+              parsed.operation,
+              collectionName,
+            );
+            if (deprecatedMessage) {
+              throw new Error(deprecatedMessage);
+            }
             throw new Error(`Unsupported operation: ${parsed.operation}`);
+          }
         }
 
         break;
