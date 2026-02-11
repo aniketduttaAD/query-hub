@@ -314,7 +314,9 @@ export default function Page() {
             }}
             className={
               connectionStatus === 'connected'
-                ? 'text-success cursor-default select-none'
+                ? activeConnection?.isDefault && defaultUnlocked
+                  ? 'text-orange-600 cursor-default select-none'
+                  : 'text-success cursor-default select-none'
                 : connectionStatus === 'connecting'
                   ? 'text-warning'
                   : 'text-text-muted'

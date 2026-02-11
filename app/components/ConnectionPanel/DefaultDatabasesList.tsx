@@ -19,6 +19,7 @@ export function DefaultDatabasesList({
     activeConnection,
     connectionStatus,
     connectingConnectionId,
+    defaultUnlocked,
     connect,
     disconnect,
     setSelectedDefaultDb,
@@ -226,7 +227,12 @@ export function DefaultDatabasesList({
                     <span className="text-xs text-text-secondary capitalize">
                       {connection.type}
                     </span>
-                    {isActive && <StatusBadge status={connectionStatus} />}
+                    {isActive && (
+                    <StatusBadge
+                      status={connectionStatus}
+                      isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
+                    />
+                  )}
                   </div>
                 </div>
 

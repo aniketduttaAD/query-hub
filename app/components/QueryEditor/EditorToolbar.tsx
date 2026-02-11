@@ -43,12 +43,13 @@ export function EditorToolbar({
   isExecuting,
   isTransactionActive,
 }: EditorToolbarProps) {
-  const { activeConnection, connectionStatus } = useConnectionStore();
+  const { activeConnection, connectionStatus, defaultUnlocked } = useConnectionStore();
   const { language } = useQueryStore();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
   const isConnected = connectionStatus === 'connected' && activeConnection;
+  const isExtendedSession = Boolean(activeConnection?.isDefault && defaultUnlocked);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -167,7 +168,7 @@ export function EditorToolbar({
           </span>
         </div>
         <div className="h-4 w-px bg-border shrink-0 hidden sm:block" />
-        <StatusBadge status={connectionStatus}>
+        <StatusBadge status={connectionStatus} isExtendedSession={isExtendedSession}>
           <span className="hidden sm:inline">
             {connectionStatus === 'connected' ? 'Connected' : connectionStatus}
           </span>

@@ -9,6 +9,7 @@ export function ConnectionList() {
     activeConnection,
     connectionStatus,
     connectingConnectionId,
+    defaultUnlocked,
     connect,
     disconnect,
     removeConnection,
@@ -71,7 +72,12 @@ export function ConnectionList() {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-text-secondary capitalize">{connection.type}</span>
-                  {isActive && <StatusBadge status={connectionStatus} />}
+                  {isActive && (
+                  <StatusBadge
+                    status={connectionStatus}
+                    isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
+                  />
+                )}
                 </div>
                 {connection.lastUsed && (
                   <div className="flex items-center gap-1 mt-1 text-xs text-text-muted">
