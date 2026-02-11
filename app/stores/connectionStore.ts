@@ -36,6 +36,8 @@ interface ConnectionState {
   disconnect: () => Promise<void>;
   setError: (message: string | null) => void;
   getDecryptedUrl: (connectionId: string) => Promise<string | null>;
+  defaultUnlocked: boolean;
+  unlockDefaultSession: (code: string) => Promise<boolean>;
 }
 type ConnectionPersist = (
   config: StateCreator<ConnectionState>,
@@ -52,21 +54,19 @@ export const useConnectionStore = create<ConnectionState>()(
       connectionStatus: 'disconnected',
       connectingConnectionId: null,
       errorMessage: null,
+      defaultUnlocked: false,
 
       loadDefaultDatabases: async () => {
         try {
           const result = await api.getDefaultDatabases();
-          const defaultDbs: Connection[] = await Promise.all(
-            result.databases.map(async (db) => ({
-              id: `default_${db.type}`,
-              name: db.name,
-              type: db.type,
-              encryptedUrl: await encryptionService.encrypt(db.url),
-              createdAt: Date.now(),
-              isDefault: true,
-              useCustomCredentials: false,
-            })),
-          );
+          const defaultDbs: Connection[] = result.databases.map((db) => ({
+            id: db.id,
+            name: db.name,
+            type: db.type,
+            createdAt: Date.now(),
+            isDefault: true,
+            useCustomCredentials: false,
+          }));
 
           set({ defaultDatabases: defaultDbs });
 
@@ -152,10 +152,31 @@ export const useConnectionStore = create<ConnectionState>()(
         });
 
         try {
-          const url = customUrl || (await encryptionService.decrypt(connection.encryptedUrl));
           const userId = connection.type === 'mongodb' ? undefined : getOrCreateSessionId();
+          const useDefaultDatabase =
+            connection.isDefault && !customUrl && !connection.encryptedUrl;
+          const url =
+            customUrl ||
+            (connection.encryptedUrl
+              ? await encryptionService.decrypt(connection.encryptedUrl)
+              : undefined);
 
-          const result = await api.connect(connection.type, url, userId, true);
+          if (!useDefaultDatabase && !url) {
+            set({
+              connectionStatus: 'error',
+              connectingConnectionId: null,
+              errorMessage: 'Connection URL is required',
+            });
+            return;
+          }
+
+          const result = await api.connect(
+            connection.type,
+            url,
+            userId,
+            true,
+            useDefaultDatabase,
+          );
 
           if (result.success) {
             set((state) => ({
@@ -208,7 +229,34 @@ export const useConnectionStore = create<ConnectionState>()(
           connectionStatus: 'disconnected',
           connectingConnectionId: null,
           errorMessage: null,
+          defaultUnlocked: false,
         });
+      },
+
+      unlockDefaultSession: async (code: string) => {
+        const { activeConnection } = get();
+        if (
+          !activeConnection?.isDefault ||
+          !activeConnection.sessionId ||
+          !activeConnection.signingKey ||
+          !code?.trim()
+        ) {
+          return false;
+        }
+        try {
+          const result = await api.sessionExtend(
+            activeConnection.sessionId,
+            activeConnection.signingKey,
+            code.trim(),
+          );
+          if (result.success) {
+            set({ defaultUnlocked: true });
+            return true;
+          }
+        } catch {
+          // ignore
+        }
+        return false;
       },
 
       setError: (message) => {
@@ -217,7 +265,7 @@ export const useConnectionStore = create<ConnectionState>()(
 
       getDecryptedUrl: async (connectionId) => {
         const connection = get().connections.find((c) => c.id === connectionId);
-        if (!connection) return null;
+        if (!connection?.encryptedUrl) return null;
         return encryptionService.decrypt(connection.encryptedUrl);
       },
     }),

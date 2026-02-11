@@ -88,18 +88,20 @@ export function ConnectionList() {
                   onClick={() => handleConnect(connection)}
                   isLoading={isConnecting}
                   title={isActive ? 'Disconnect' : 'Connect'}
+                  aria-label={isActive ? `Disconnect from ${connection.name}` : `Connect to ${connection.name}`}
                 >
-                  {isActive ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  {isActive ? <Square className="w-3.5 h-3.5" aria-hidden /> : <Play className="w-3.5 h-3.5" aria-hidden />}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => removeConnection(connection.id)}
-                  title="Delete"
+                  title="Delete connection"
+                  aria-label={`Delete connection ${connection.name}`}
                   disabled={isActive}
                   className="text-error hover:text-error"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden />
                 </Button>
               </div>
             </div>

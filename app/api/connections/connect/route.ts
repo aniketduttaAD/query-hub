@@ -22,9 +22,10 @@ export async function POST(request: Request) {
 
   const body = await parseJsonBody<{
     type: DatabaseType;
-    connectionUrl: string;
+    connectionUrl?: string;
     userId?: string;
     isIsolated?: boolean;
+    useDefaultDatabase?: boolean;
   }>(request);
   if (body.error) {
     return jsonResponse(
@@ -33,25 +34,54 @@ export async function POST(request: Request) {
     );
   }
 
-  const { type, connectionUrl, userId, isIsolated } = body.data ?? {};
+  const { type, connectionUrl, userId, isIsolated, useDefaultDatabase } = body.data ?? {};
 
-  if (!type || !connectionUrl) {
+  if (!type) {
     return jsonResponse(
-      { success: false, error: 'Missing type or connectionUrl' },
+      { success: false, error: 'Missing type' },
       { status: 400, headers },
     );
   }
 
-  if (!validateConnectionUrl(type, connectionUrl)) {
-    return jsonResponse(
-      { success: false, error: `Invalid connection URL format for ${type}` },
-      { status: 400, headers },
-    );
+  let effectiveConnectionUrl: string;
+
+  if (useDefaultDatabase) {
+    if (connectionUrl) {
+      return jsonResponse(
+        { success: false, error: 'Do not send connectionUrl when useDefaultDatabase is true' },
+        { status: 400, headers },
+      );
+    }
+    const defaults = loadDefaultDatabases();
+    const defaultConfig = defaults.find((db) => db.type === type);
+    if (!defaultConfig?.url) {
+      return jsonResponse(
+        { success: false, error: `No default database configured for ${type}` },
+        { status: 400, headers },
+      );
+    }
+    effectiveConnectionUrl = defaultConfig.url;
+  } else {
+    if (!connectionUrl) {
+      return jsonResponse(
+        { success: false, error: 'Missing connectionUrl (or set useDefaultDatabase for default DB)' },
+        { status: 400, headers },
+      );
+    }
+    if (!validateConnectionUrl(type, connectionUrl)) {
+      return jsonResponse(
+        { success: false, error: `Invalid connection URL format for ${type}` },
+        { status: 400, headers },
+      );
+    }
+    effectiveConnectionUrl = connectionUrl;
   }
 
   try {
     const defaults = loadDefaultDatabases();
-    const matchesDefault = defaults.some((db) => db.type === type && db.url === connectionUrl);
+    const matchesDefault = defaults.some(
+      (db) => db.type === type && db.url === effectiveConnectionUrl,
+    );
 
     let effectiveUserId: string | undefined = userId;
     let effectiveIsIsolated: boolean;
@@ -71,12 +101,15 @@ export async function POST(request: Request) {
       }
     }
 
+    const isDefaultConnection = useDefaultDatabase ?? matchesDefault;
+
     const { sessionId, serverVersion, signingKey, userDatabase } =
       await connectionManager.createSession(
         type,
-        connectionUrl,
+        effectiveConnectionUrl,
         effectiveUserId,
         effectiveIsIsolated,
+        isDefaultConnection,
       );
 
     return jsonResponse(

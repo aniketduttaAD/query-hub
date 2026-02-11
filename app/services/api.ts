@@ -20,13 +20,21 @@ class ApiError extends Error {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new ApiError(data.error || 'An error occurred', response.status);
+  const text = await response.text();
+  let data: Record<string, unknown> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      data = {};
+    }
   }
 
-  return data;
+  if (!response.ok) {
+    throw new ApiError((data.error as string) || 'An error occurred', response.status);
+  }
+
+  return data as T;
 }
 
 const stripUndefined = <T extends Record<string, unknown>>(payload: T): T => {
@@ -51,14 +59,21 @@ export const api = {
 
   async connect(
     type: DatabaseType,
-    connectionUrl: string,
+    connectionUrl: string | undefined,
     userId?: string,
     isIsolated?: boolean,
+    useDefaultDatabase?: boolean,
   ): Promise<ConnectResponse & { userDatabase?: string; isIsolated?: boolean }> {
+    const body: Record<string, unknown> = { type, userId, isIsolated };
+    if (useDefaultDatabase) {
+      body.useDefaultDatabase = true;
+    } else if (connectionUrl) {
+      body.connectionUrl = connectionUrl;
+    }
     const response = await fetch(`${API_BASE}/connections/connect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, connectionUrl, userId, isIsolated }),
+      body: JSON.stringify(body),
     });
     return handleResponse<ConnectResponse & { userDatabase?: string; isIsolated?: boolean }>(
       response,
@@ -75,6 +90,28 @@ export const api = {
       headers['x-signature'] = signature;
     }
     const response = await fetch(`${API_BASE}/connections/disconnect`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    return handleResponse<{ success: boolean }>(response);
+  },
+
+  async sessionExtend(
+    sessionId: string,
+    signingKey: string,
+    code: string,
+  ): Promise<{ success: boolean }> {
+    const body = { sessionId };
+    const timestamp = Date.now().toString();
+    const signature = await signPayload(signingKey, body, timestamp);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-timestamp': timestamp,
+      'x-signature': signature,
+      'x-request-code': code,
+    };
+    const response = await fetch(`${API_BASE}/connections/session-extend`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -210,10 +247,10 @@ export const api = {
   },
 
   async getDefaultDatabases(): Promise<{
-    databases: Array<{ type: DatabaseType; name: string; url: string }>;
+    databases: Array<{ id: string; type: DatabaseType; name: string }>;
   }> {
     const response = await fetch(`${API_BASE}/config/databases`);
-    return handleResponse<{ databases: Array<{ type: DatabaseType; name: string; url: string }> }>(
+    return handleResponse<{ databases: Array<{ id: string; type: DatabaseType; name: string }> }>(
       response,
     );
   },

@@ -125,11 +125,9 @@ export async function POST(request: Request) {
     let totalExecutionTime = 0;
 
     for (const statement of statements) {
-      const validation = validateQuery(
-        session.type,
-        statement,
-        session.type === 'mongodb' ? false : (session.isIsolated ?? false),
-      );
+      const treatAsDefault =
+        (session.isDefaultConnection ?? session.isIsolated ?? false) && !session.allowDestructive;
+      const validation = validateQuery(session.type, statement, treatAsDefault);
       if (!validation.valid) {
         return jsonResponse(
           { success: false, error: validation.error || 'Query validation failed' },
@@ -140,6 +138,7 @@ export async function POST(request: Request) {
       const queryOptions: QueryOptions = {
         ...options,
         explain: options.explain,
+        allowDestructive: session.allowDestructive,
       };
 
       if (session.type !== 'mongodb') {

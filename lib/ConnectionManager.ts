@@ -18,6 +18,7 @@ class ConnectionManager {
     connectionUrl: string,
     userId?: string,
     isIsolated: boolean = false,
+    isDefaultConnection: boolean = false,
   ): Promise<{
     sessionId: string;
     serverVersion: string;
@@ -136,6 +137,7 @@ class ConnectionManager {
       signingKey,
       userId,
       isIsolated,
+      isDefaultConnection,
       userDatabase,
     });
 
@@ -153,6 +155,14 @@ class ConnectionManager {
       session.lastActivity = new Date();
     }
     return session;
+  }
+
+  setSessionAllowDestructive(sessionId: string, allow: boolean): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isDefaultConnection) return false;
+    session.allowDestructive = allow;
+    session.lastActivity = new Date();
+    return true;
   }
 
   async closeSession(sessionId: string): Promise<void> {

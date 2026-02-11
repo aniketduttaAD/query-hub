@@ -493,7 +493,7 @@ export function QueryEditor() {
   const editorLanguage = language === 'mongodb' ? 'mongodb' : 'sql';
 
   return (
-    <div className="flex flex-col h-full bg-surface rounded-lg border border-border overflow-hidden">
+    <div className="flex flex-col h-full min-h-0 bg-surface rounded-lg border border-border overflow-hidden">
       <EditorToolbar
         onExecute={executeQuery}
         onCancel={handleCancelQuery}

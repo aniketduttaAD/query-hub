@@ -58,6 +58,7 @@ function checkNestedDepth(query: string): SecurityCheckResult {
 export function sanitizeSqlQuery(
   query: string,
   dialect: 'postgresql' | 'mysql',
+  isDefaultConnection: boolean = true,
 ): SecurityCheckResult {
   const lengthCheck = checkQueryLength(query);
   if (!lengthCheck.safe) return lengthCheck;
@@ -65,42 +66,44 @@ export function sanitizeSqlQuery(
   const depthCheck = checkNestedDepth(query);
   if (!depthCheck.safe) return depthCheck;
 
-  for (const pattern of DANGEROUS_SQL_PATTERNS) {
-    if (pattern.test(query)) {
-      return {
-        safe: false,
-        reason: 'Query contains potentially dangerous operations',
-      };
+  if (isDefaultConnection) {
+    for (const pattern of DANGEROUS_SQL_PATTERNS) {
+      if (pattern.test(query)) {
+        return {
+          safe: false,
+          reason: 'Query contains potentially dangerous operations',
+        };
+      }
     }
-  }
 
-  if (dialect === 'mysql') {
-    if (/\bLOAD\s+(DATA|FILE)\b/i.test(query)) {
-      return {
-        safe: false,
-        reason: 'LOAD DATA/FILE operations are not allowed',
-      };
+    if (dialect === 'mysql') {
+      if (/\bLOAD\s+(DATA|FILE)\b/i.test(query)) {
+        return {
+          safe: false,
+          reason: 'LOAD DATA/FILE operations are not allowed',
+        };
+      }
+      if (/\bINTO\s+OUTFILE\b/i.test(query)) {
+        return {
+          safe: false,
+          reason: 'INTO OUTFILE operations are not allowed',
+        };
+      }
     }
-    if (/\bINTO\s+OUTFILE\b/i.test(query)) {
-      return {
-        safe: false,
-        reason: 'INTO OUTFILE operations are not allowed',
-      };
-    }
-  }
 
-  if (dialect === 'postgresql') {
-    if (/\bCOPY\s+.*\s+FROM\s+PROGRAM/i.test(query)) {
-      return {
-        safe: false,
-        reason: 'COPY FROM PROGRAM operations are not allowed',
-      };
-    }
-    if (/\bpg_read_file\(/i.test(query)) {
-      return {
-        safe: false,
-        reason: 'File system access functions are not allowed',
-      };
+    if (dialect === 'postgresql') {
+      if (/\bCOPY\s+.*\s+FROM\s+PROGRAM/i.test(query)) {
+        return {
+          safe: false,
+          reason: 'COPY FROM PROGRAM operations are not allowed',
+        };
+      }
+      if (/\bpg_read_file\(/i.test(query)) {
+        return {
+          safe: false,
+          reason: 'File system access functions are not allowed',
+        };
+      }
     }
   }
 
@@ -109,7 +112,7 @@ export function sanitizeSqlQuery(
 
 export function sanitizeMongoQuery(
   query: string,
-  _isIsolated: boolean = false,
+  isDefaultConnection: boolean = false,
 ): SecurityCheckResult {
   const lengthCheck = checkQueryLength(query);
   if (!lengthCheck.safe) return lengthCheck;
@@ -117,35 +120,38 @@ export function sanitizeMongoQuery(
   const depthCheck = checkNestedDepth(query);
   if (!depthCheck.safe) return depthCheck;
 
-  for (const pattern of DANGEROUS_MONGO_PATTERNS) {
-    if (pattern.test(query)) {
-      return {
-        safe: false,
-        reason: 'Query contains potentially dangerous operations',
-      };
+  if (isDefaultConnection) {
+    for (const pattern of DANGEROUS_MONGO_PATTERNS) {
+      if (pattern.test(query)) {
+        return {
+          safe: false,
+          reason: 'Query contains potentially dangerous operations',
+        };
+      }
     }
   }
 
-  try {
-    const parsed = parseMongoQuery(query);
-
-    if (parsed.args && Array.isArray(parsed.args)) {
-      const argsStr = JSON.stringify(parsed.args);
-      if (argsStr.includes('$where')) {
-        return {
-          safe: false,
-          reason: '$where operator is not allowed for security reasons',
-        };
+  if (isDefaultConnection) {
+    try {
+      const parsed = parseMongoQuery(query);
+      if (parsed.args && Array.isArray(parsed.args)) {
+        const argsStr = JSON.stringify(parsed.args);
+        if (argsStr.includes('$where')) {
+          return {
+            safe: false,
+            reason: '$where operator is not allowed for security reasons',
+          };
+        }
+        if (argsStr.includes('$eval')) {
+          return {
+            safe: false,
+            reason: '$eval operator is not allowed for security reasons',
+          };
+        }
       }
-      if (argsStr.includes('$eval')) {
-        return {
-          safe: false,
-          reason: '$eval operator is not allowed for security reasons',
-        };
-      }
+    } catch {
+      return { safe: true };
     }
-  } catch {
-    return { safe: true };
   }
 
   return { safe: true };
@@ -154,14 +160,14 @@ export function sanitizeMongoQuery(
 export function sanitizeQuery(
   type: DatabaseType,
   query: string,
-  isIsolated: boolean = false,
+  isDefaultConnection: boolean = false,
 ): SecurityCheckResult {
   if (type === 'mongodb') {
-    return sanitizeMongoQuery(query, isIsolated);
+    return sanitizeMongoQuery(query, isDefaultConnection);
   } else if (type === 'postgresql') {
-    return sanitizeSqlQuery(query, 'postgresql');
+    return sanitizeSqlQuery(query, 'postgresql', isDefaultConnection);
   } else if (type === 'mysql') {
-    return sanitizeSqlQuery(query, 'mysql');
+    return sanitizeSqlQuery(query, 'mysql', isDefaultConnection);
   }
 
   return { safe: true };

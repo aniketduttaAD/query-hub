@@ -10,21 +10,29 @@ interface AccordionItemProps {
 
 function AccordionItem({ title, children, defaultOpen = false }: AccordionItemProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentId = `accordion-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
   return (
     <div className="border-b border-border last:border-b-0">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-surface-hover transition-colors"
+        aria-expanded={isOpen}
+        aria-controls={contentId}
+        className="w-full flex items-center justify-between gap-2 p-4 text-left hover:bg-surface-hover transition-colors min-h-[48px] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
       >
         <span className="font-medium text-primary">{title}</span>
         {isOpen ? (
-          <ChevronDown className="w-5 h-5 text-text-muted" />
+          <ChevronDown className="w-5 h-5 text-text-muted shrink-0" aria-hidden />
         ) : (
-          <ChevronRight className="w-5 h-5 text-text-muted" />
+          <ChevronRight className="w-5 h-5 text-text-muted shrink-0" aria-hidden />
         )}
       </button>
-      {isOpen && <div className="px-4 pb-4 text-sm text-text-secondary space-y-3">{children}</div>}
+      {isOpen && (
+        <div id={contentId} className="px-4 pb-4 text-sm text-text-secondary space-y-3 leading-relaxed" role="region">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -198,7 +206,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://www.mongodb.com/try/download/community"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         mongodb.com/download
                       </a>
@@ -221,7 +229,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://www.postgresql.org/download/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         postgresql.org/download
                       </a>
@@ -244,7 +252,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://dev.mysql.com/downloads/mysql/"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         dev.mysql.com/downloads/mysql
                       </a>
@@ -273,7 +281,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://www.mongodb.com/cloud/atlas/register"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         mongodb.com/cloud/atlas
                       </a>
@@ -300,7 +308,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://neon.tech"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         neon.tech
                       </a>
@@ -321,7 +329,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://supabase.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         supabase.com
                       </a>
@@ -345,7 +353,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://planetscale.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         planetscale.com
                       </a>
@@ -366,7 +374,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                         href="https://aiven.io"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent hover:underline"
+                        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 rounded"
                       >
                         aiven.io
                       </a>

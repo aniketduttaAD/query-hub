@@ -6,7 +6,7 @@ export interface Connection {
   id: string;
   name: string;
   type: DatabaseType;
-  encryptedUrl: string;
+  encryptedUrl?: string;
   createdAt: number;
   lastUsed?: number;
   isDefault?: boolean;

@@ -13,27 +13,28 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-primary mb-1">
+          <label htmlFor={inputId} className="block text-sm font-medium text-primary mb-1.5 leading-tight">
             {label}
           </label>
         )}
         <input
           ref={ref}
           id={inputId}
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
           className={`
-            w-full px-3 py-2
-            bg-surface border rounded-md
-            text-sm text-primary
-            placeholder:text-text-muted
-            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent
+            w-full px-3 py-2.5 min-h-[44px]
+            bg-surface border rounded-md text-base
+            text-primary placeholder:text-text-muted
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:border-transparent
             disabled:bg-surface-hover disabled:cursor-not-allowed
             ${error ? 'border-error' : 'border-border'}
             ${className}
           `}
           {...props}
         />
-        {error && <p className="mt-1 text-xs text-error">{error}</p>}
-        {hint && !error && <p className="mt-1 text-xs text-text-secondary">{hint}</p>}
+        {error && <p id={`${inputId}-error`} className="mt-1 text-sm text-error" role="alert">{error}</p>}
+        {hint && !error && <p id={`${inputId}-hint`} className="mt-1 text-sm text-text-secondary leading-relaxed">{hint}</p>}
       </div>
     );
   },

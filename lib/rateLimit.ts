@@ -127,3 +127,9 @@ export const connectionLimiter = createRateLimiter({
   max: readPositiveInt(process.env.RATE_LIMIT_CONNECTION_MAX, 20),
   keyPrefix: 'connection',
 });
+
+export const adminCleanupLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: readPositiveInt(process.env.RATE_LIMIT_ADMIN_CLEANUP_MAX, 5),
+  keyPrefix: 'admin-cleanup',
+});

@@ -112,14 +112,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (session.isIsolated && session.type !== 'mongodb' && containsDangerousSql(query)) {
+    const treatAsDefault =
+      (session.isDefaultConnection ?? session.isIsolated ?? false) && !session.allowDestructive;
+    if (treatAsDefault && session.type !== 'mongodb' && containsDangerousSql(query)) {
       return Response.json(
         { success: false, error: 'Query contains potentially dangerous operations' },
         { status: 400 },
       );
     }
 
-    const validation = validateQuery(session.type, query, session.isIsolated ?? false);
+    const validation = validateQuery(session.type, query, treatAsDefault);
     if (!validation.valid) {
       return Response.json(
         { success: false, error: validation.error || 'Query validation failed' },
@@ -127,9 +129,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (session.isIsolated && session.type === 'mysql' && session.userDatabase) {
+    const restrictDb =
+      session.isIsolated &&
+      !session.allowDestructive &&
+      session.type === 'mysql' &&
+      session.userDatabase;
+    if (restrictDb) {
       const referencedDatabases = extractSqlDatabases(query, 'mysql').map((db) => db.toLowerCase());
-      const allowed = new Set<string>([session.userDatabase.toLowerCase()]);
+      const allowed = new Set<string>([session.userDatabase!.toLowerCase()]);
       const selectedDb = database?.trim();
       if (selectedDb !== undefined && selectedDb !== '') {
         allowed.add(selectedDb.toLowerCase());
@@ -151,6 +158,7 @@ export async function POST(request: Request) {
           : database;
     const result = await session.adapter.executeQuery(query, effectiveDatabase, {
       limit: undefined,
+      allowDestructive: session.allowDestructive,
     });
     const filename = `query-results.${format}`;
     const headers = new Headers({

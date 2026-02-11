@@ -72,27 +72,27 @@ export function CommandHistory() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-border">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-primary">History</h4>
+    <div className="h-full flex flex-col min-h-0">
+      <div className="p-2 sm:p-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <h4 className="text-sm font-semibold text-primary truncate">History</h4>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClearAll}
-            className="text-error hover:text-error"
+            className="text-error hover:text-error shrink-0"
             title="Clear all history"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
 
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 overflow-x-auto pb-1">
           <Button
             variant={selectedType === 'all' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setSelectedType('all')}
-            className="text-xs"
+            className="text-xs shrink-0"
           >
             All ({entries.length})
           </Button>
@@ -100,7 +100,7 @@ export function CommandHistory() {
             variant={selectedType === 'mongodb' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setSelectedType('mongodb')}
-            className="text-xs"
+            className="text-xs shrink-0"
           >
             MongoDB ({mongoCount})
           </Button>
@@ -108,24 +108,24 @@ export function CommandHistory() {
             variant={selectedType === 'postgresql' ? 'primary' : 'ghost'}
             size="sm"
             onClick={() => setSelectedType('postgresql')}
-            className="text-xs"
+            className="text-xs shrink-0"
           >
             PostgreSQL ({postgresCount})
           </Button>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search history..."
-            className="pl-8"
+            className="pl-8 w-full min-w-0"
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto p-2 sm:p-3 min-h-0">
         {Object.keys(entriesByDate).length === 0 ? (
           <div className="text-center py-8 text-text-secondary text-sm">
             No matching entries found
@@ -153,13 +153,13 @@ export function CommandHistory() {
         )}
       </div>
 
-      <div className="p-3 border-t border-border bg-surface-hover">
-        <div className="flex items-center justify-between">
+      <div className="p-2 sm:p-3 border-t border-border bg-surface-hover shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-1">
           <p className="text-xs text-text-muted">
             {filteredEntries.length} {filteredEntries.length === 1 ? 'query' : 'queries'} shown
           </p>
           <p className="text-xs text-text-muted flex items-center gap-1">
-            <Database className="w-3 h-3" />
+            <Database className="w-3 h-3 shrink-0" />
             History retained for 2 days
           </p>
         </div>

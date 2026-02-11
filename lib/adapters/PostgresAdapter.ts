@@ -139,7 +139,7 @@ export class PostgresAdapter implements DatabaseAdapter {
   ): Promise<QueryResult> {
     if (!this.pool) throw new Error('Not connected');
 
-    if (this.isDefaultConfig) {
+    if (this.isDefaultConfig && !options?.allowDestructive) {
       const destructiveCheck = this.isDestructiveQuery(query);
       if (destructiveCheck.isDestructive) {
         return this.simulateDestructiveOperation(

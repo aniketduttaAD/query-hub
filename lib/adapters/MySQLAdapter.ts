@@ -181,7 +181,7 @@ export class MySQLAdapter implements DatabaseAdapter {
   ): Promise<QueryResult> {
     if (!this.pool) throw new Error('Not connected');
 
-    if (this.isDefaultConfig) {
+    if (this.isDefaultConfig && !options?.allowDestructive) {
       const destructiveCheck = this.isDestructiveQuery(query);
       if (destructiveCheck.isDestructive) {
         return this.simulateDestructiveOperation(
@@ -456,6 +456,7 @@ export class MySQLAdapter implements DatabaseAdapter {
 
     const connection = await this.pool.getConnection();
     const system = ['information_schema', 'mysql', 'performance_schema', 'sys'];
+    const safeNameRe = /^[a-zA-Z0-9_]+$/;
 
     try {
       const [rows] = await connection.query('SHOW DATABASES');
@@ -463,8 +464,10 @@ export class MySQLAdapter implements DatabaseAdapter {
       for (const row of list) {
         const name = row.Database;
         if (system.includes(name)) continue;
+        if (!safeNameRe.test(name)) continue;
         try {
-          await connection.query(`DROP DATABASE IF EXISTS \`${name.replace(/`/g, '``')}\``);
+          const escaped = name.replace(/`/g, '``');
+          await connection.query(`DROP DATABASE IF EXISTS \`${escaped}\``);
           logger.logDatabaseOperation('database dropped', name);
         } catch (error) {
           logger.error('Failed to drop database', error, { database: name });

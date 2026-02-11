@@ -159,7 +159,7 @@ export class MongoAdapter implements DatabaseAdapter {
             break;
           }
           case 'dropdatabase': {
-            if (this.isDefaultConfig) {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
               const simResult = this.simulateDestructiveOperation(
                 'dropDatabase',
                 `Database "${effectiveDb || 'current'}" would be dropped`,
@@ -176,7 +176,7 @@ export class MongoAdapter implements DatabaseAdapter {
             if (!target) {
               throw new Error('Missing collection name for dropCollection');
             }
-            if (this.isDefaultConfig) {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
               const simResult = this.simulateDestructiveOperation(
                 'dropCollection',
                 `Collection "${target}" would be dropped`,
@@ -293,7 +293,7 @@ export class MongoAdapter implements DatabaseAdapter {
           }
 
           case 'drop': {
-            if (this.isDefaultConfig) {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
               const simResult = this.simulateDestructiveOperation(
                 'drop',
                 `Collection "${collectionName}" would be dropped`,
@@ -445,7 +445,7 @@ export class MongoAdapter implements DatabaseAdapter {
           }
 
           case 'deleteone': {
-            if (this.isDefaultConfig) {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
               const simResult = this.simulateDestructiveOperation(
                 'deleteOne',
                 `One document matching the filter would be deleted`,
@@ -468,7 +468,7 @@ export class MongoAdapter implements DatabaseAdapter {
           }
 
           case 'deletemany': {
-            if (this.isDefaultConfig) {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
               const simResult = this.simulateDestructiveOperation(
                 'deleteMany',
                 `All documents matching the filter would be deleted`,

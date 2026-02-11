@@ -14,13 +14,13 @@ const SQL_DIALECT: Record<Exclude<DatabaseType, 'mongodb'>, string> = {
 export function validateQuery(
   type: DatabaseType,
   query: string,
-  isIsolated: boolean = false,
+  isDefaultConnection: boolean = false,
 ): { valid: boolean; error?: string } {
   if (!query.trim()) {
     return { valid: false, error: 'Query is empty' };
   }
 
-  const securityCheck = sanitizeQuery(type, query, isIsolated);
+  const securityCheck = sanitizeQuery(type, query, isDefaultConnection);
   if (!securityCheck.safe) {
     return {
       valid: false,

@@ -154,61 +154,61 @@ export function ResultsPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface rounded-lg border border-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-surface border-b border-border">
-        <div className="flex items-center gap-4">
-          <h3 className="text-sm font-semibold text-primary">Results</h3>
+    <div className="flex flex-col h-full min-h-0 bg-surface rounded-lg border border-border overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 sm:px-4 py-2 bg-surface border-b border-border shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <h3 className="text-sm font-semibold text-primary shrink-0">Results</h3>
           {results && (
-            <div className="flex items-center gap-3 text-xs text-text-secondary">
+            <div className="flex items-center gap-2 sm:gap-3 text-xs text-text-secondary shrink-0">
               <span className="flex items-center gap-1">
-                <Rows3 className="w-3.5 h-3.5" />
+                <Rows3 className="w-3.5 h-3.5 shrink-0" />
                 {results.rowCount} row{results.rowCount !== 1 ? 's' : ''}
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 shrink-0" />
                 {results.executionTime}ms
               </span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-surface-hover rounded-md p-0.5">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto">
+          <div className="flex items-center bg-surface-hover rounded-md p-0.5 shrink-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleExport('csv')}
-              className="px-2"
+              className="px-1.5 sm:px-2"
               title="Export as CSV"
               disabled={!results?.data?.length}
             >
-              <Download className="w-4 h-4" />
-              CSV
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">CSV</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleExport('json')}
-              className="px-2"
+              className="px-1.5 sm:px-2"
               title="Export as JSON"
               disabled={!results?.data?.length}
             >
-              <Download className="w-4 h-4" />
-              JSON
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">JSON</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleExport('xlsx')}
-              className="px-2"
+              className="px-1.5 sm:px-2"
               title="Export as Excel"
               disabled={!results?.data?.length}
             >
-              <Download className="w-4 h-4" />
-              Excel
+              <Download className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Excel</span>
             </Button>
           </div>
-          <div className="flex items-center bg-surface-hover rounded-md p-0.5">
+          <div className="flex items-center bg-surface-hover rounded-md p-0.5 shrink-0">
             <Button
               variant={viewMode === 'table' ? 'secondary' : 'ghost'}
               size="sm"
@@ -234,16 +234,16 @@ export function ResultsPanel() {
       {results?.message && (
         <div
           className={`
-            flex items-center gap-2 px-4 py-2 text-sm border-b
+            flex items-center gap-2 px-2 sm:px-4 py-2 text-sm border-b shrink-0 min-w-0
             ${messageColors[results.messageType]}
           `}
         >
-          {messageIcons[results.messageType]}
-          <span className="flex-1">{results.message}</span>
+          <span className="shrink-0">{messageIcons[results.messageType]}</span>
+          <span className="flex-1 min-w-0 truncate">{results.message}</span>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden min-w-0">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">

@@ -18,7 +18,7 @@ export function Tabs({ defaultTab, children, className = '' }: TabsProps) {
 
   return (
     <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-      <div className={`flex flex-col h-full ${className}`}>{children}</div>
+      <div className={`flex flex-col h-full min-h-0 ${className}`}>{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -31,9 +31,10 @@ interface TabListProps {
 export function TabList({ children, className = '' }: TabListProps) {
   return (
     <div
+      role="tablist"
       className={`
         flex border-b border-border
-        bg-surface
+        bg-surface overflow-x-auto shrink-0
         ${className}
       `}
     >
@@ -55,14 +56,25 @@ export function Tab({ value, children, icon }: TabProps) {
   const { activeTab, setActiveTab } = context;
   const isActive = activeTab === value;
 
+  const tabId = `tab-${value.replace(/\s+/g, '-')}`;
+  const panelId = `tabpanel-${value.replace(/\s+/g, '-')}`;
+
   return (
     <button
+      type="button"
+      role="tab"
+      id={tabId}
+      aria-selected={isActive}
+      aria-controls={panelId}
+      tabIndex={isActive ? 0 : -1}
       onClick={() => setActiveTab(value)}
       className={`
-        flex items-center gap-2 px-4 py-2.5
+        flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 shrink-0 min-h-[44px]
         text-sm font-medium
         border-b-2 -mb-px
         transition-colors duration-200
+        whitespace-nowrap
+        focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset
         ${
           isActive
             ? 'text-accent border-accent'
@@ -88,7 +100,19 @@ export function TabPanel({ value, children, className = '' }: TabPanelProps) {
 
   const { activeTab } = context;
 
+  const tabId = `tab-${value.replace(/\s+/g, '-')}`;
+  const panelId = `tabpanel-${value.replace(/\s+/g, '-')}`;
+
   if (activeTab !== value) return null;
 
-  return <div className={`flex-1 overflow-auto ${className}`}>{children}</div>;
+  return (
+    <div
+      role="tabpanel"
+      id={panelId}
+      aria-labelledby={tabId}
+      className={`flex-1 overflow-auto min-h-0 ${className}`}
+    >
+      {children}
+    </div>
+  );
 }

@@ -111,10 +111,10 @@ export function DatabaseExplorer() {
     activeConnection?.type === 'postgresql' ? 'No schemas found' : 'No databases found';
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <div>
-          <h4 className="text-sm font-semibold text-primary">Schema Explorer</h4>
+    <div className="h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-between gap-2 p-2 sm:p-3 border-b border-border shrink-0">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-primary truncate">Schema Explorer</h4>
           {isLoading && tree.length > 0 ? (
             <p className="text-xs text-text-muted">Refreshing schema...</p>
           ) : lastRefreshed ? (
@@ -136,7 +136,7 @@ export function DatabaseExplorer() {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto min-h-0">
         {isLoading && tree.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-accent mb-2" />
@@ -153,7 +153,7 @@ export function DatabaseExplorer() {
         )}
       </div>
 
-      <div className="p-3 border-t border-border bg-surface-hover">
+      <div className="p-2 sm:p-3 border-t border-border bg-surface-hover shrink-0">
         <p className="text-xs text-text-muted">
           Click on a table to insert its name into the editor
         </p>

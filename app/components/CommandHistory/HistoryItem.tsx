@@ -42,23 +42,25 @@ export function HistoryItem({ entry, onRerun, onDelete }: HistoryItemProps) {
             size="sm"
             onClick={() => onRerun(entry)}
             title="Load query into editor"
-            className="p-1"
+            aria-label="Load this query into editor"
+            className="p-1.5 min-h-[36px] min-w-[36px]"
           >
-            <Play className="w-3.5 h-3.5" />
+            <Play className="w-3.5 h-3.5" aria-hidden />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onDelete(entry.id)}
             title="Delete from history"
-            className="p-1 text-error hover:text-error"
+            aria-label="Delete this entry from history"
+            className="p-1.5 min-h-[36px] min-w-[36px] text-error hover:text-error"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3.5 h-3.5" aria-hidden />
           </Button>
         </div>
       </div>
 
-      <pre className="text-xs font-mono bg-surface-hover rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+      <pre className="text-xs sm:text-sm font-mono bg-surface-hover rounded p-2 overflow-x-auto whitespace-pre-wrap break-words leading-relaxed" style={{ wordBreak: 'break-word' }}>
         {truncatedQuery}
       </pre>
 

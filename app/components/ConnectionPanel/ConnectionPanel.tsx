@@ -35,9 +35,9 @@ export function ConnectionPanel() {
       activeConnection?.type === 'mysql');
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0">
       {isDefaultDb && activeConnection && <DefaultDbNotice dbType={activeConnection.type} />}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-2 sm:p-4 min-h-0">
         {(defaultConnectionsToShow.length > 0 ||
           Object.keys(savedConnectionsByType).length > 0) && (
           <div className="mb-4">

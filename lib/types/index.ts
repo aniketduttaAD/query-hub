@@ -14,6 +14,7 @@ export interface QueryOptions {
   isIsolated?: boolean;
   userDatabase?: string;
   explain?: boolean;
+  allowDestructive?: boolean;
 }
 
 export interface ColumnInfo {
@@ -60,5 +61,7 @@ export interface Session {
   signingKey: string;
   userId?: string;
   isIsolated?: boolean;
+  isDefaultConnection?: boolean;
+  allowDestructive?: boolean;
   userDatabase?: string;
 }

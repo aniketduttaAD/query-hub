@@ -37,13 +37,20 @@ export function Tooltip({ content, children, position = 'bottom' }: TooltipProps
       className="relative inline-block"
       onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
+      onFocusCapture={(e) => {
+        if (e.target instanceof HTMLElement && e.target.matches(':focus-visible')) {
+          setIsVisible(true);
+        }
+      }}
+      onBlurCapture={() => setIsVisible(false)}
     >
       {children}
       {isVisible && (
         <div
+          role="tooltip"
           className={`
-            absolute z-50 px-3 py-2 text-xs text-text-primary bg-surface border border-border rounded-md shadow-lg
-            whitespace-normal max-w-md
+            absolute z-50 px-3 py-2 text-sm text-text-primary bg-surface border border-border rounded-md shadow-lg
+            whitespace-normal max-w-xs sm:max-w-md leading-relaxed
             ${positionClasses[position]}
             animate-in fade-in zoom-in-95 duration-150
           `}
@@ -55,6 +62,7 @@ export function Tooltip({ content, children, position = 'bottom' }: TooltipProps
               ${arrowClasses[position]}
               ${arrowBorders[position]}
             `}
+            aria-hidden
           />
         </div>
       )}
