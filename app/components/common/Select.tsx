@@ -18,7 +18,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={selectId} className="block text-sm font-medium text-primary mb-1.5 leading-tight">
+          <label
+            htmlFor={selectId}
+            className="block text-sm font-medium text-primary mb-1.5 leading-tight"
+          >
             {label}
           </label>
         )}
@@ -43,7 +46,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p id={`${selectId}-error`} className="mt-1 text-sm text-error" role="alert">{error}</p>}
+        {error && (
+          <p id={`${selectId}-error`} className="mt-1 text-sm text-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
     );
   },

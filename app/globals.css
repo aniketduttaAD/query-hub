@@ -118,7 +118,9 @@ body {
 }
 
 /* Readability: ensure minimum contrast and comfortable reading */
-p, li, .text-content {
+p,
+li,
+.text-content {
   line-height: 1.6;
 }
 

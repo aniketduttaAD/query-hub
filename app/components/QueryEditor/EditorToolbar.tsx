@@ -146,12 +146,16 @@ export function EditorToolbar({
   ) : (
     <Tooltip
       content={
-        !isConnected
-          ? 'Connect to a database first'
-          : 'Execute query (Ctrl+Enter / Cmd+Enter)'
+        !isConnected ? 'Connect to a database first' : 'Execute query (Ctrl+Enter / Cmd+Enter)'
       }
     >
-      <Button variant="accent" size="sm" onClick={onExecute} disabled={!isConnected} className="shrink-0">
+      <Button
+        variant="accent"
+        size="sm"
+        onClick={onExecute}
+        disabled={!isConnected}
+        className="shrink-0"
+      >
         <Play className="w-4 h-4" />
         Run
       </Button>
@@ -163,9 +167,7 @@ export function EditorToolbar({
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Database className="w-4 h-4 text-text-secondary shrink-0" />
-          <span className="text-xs sm:text-sm font-medium truncate">
-            {languageLabel(language)}
-          </span>
+          <span className="text-xs sm:text-sm font-medium truncate">{languageLabel(language)}</span>
         </div>
         <div className="h-4 w-px bg-border shrink-0 hidden sm:block" />
         <StatusBadge status={connectionStatus} isExtendedSession={isExtendedSession}>
@@ -204,7 +206,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onFormat(); setMoreOpen(false); }}
+                onClick={() => {
+                  onFormat();
+                  setMoreOpen(false);
+                }}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
               >
                 <Wand2 className="w-4 h-4 shrink-0" />
@@ -213,7 +218,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onExplain(); setMoreOpen(false); }}
+                onClick={() => {
+                  onExplain();
+                  setMoreOpen(false);
+                }}
                 disabled={!isConnected || isExecuting || isTransactionActive}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset disabled:opacity-50"
               >
@@ -223,7 +231,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onBeginTransaction(); setMoreOpen(false); }}
+                onClick={() => {
+                  onBeginTransaction();
+                  setMoreOpen(false);
+                }}
                 disabled={!isConnected || isExecuting || isTransactionActive}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset disabled:opacity-50"
               >
@@ -233,7 +244,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onCommitTransaction(); setMoreOpen(false); }}
+                onClick={() => {
+                  onCommitTransaction();
+                  setMoreOpen(false);
+                }}
                 disabled={!isConnected || isExecuting || !isTransactionActive}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset disabled:opacity-50"
               >
@@ -243,7 +257,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onRollbackTransaction(); setMoreOpen(false); }}
+                onClick={() => {
+                  onRollbackTransaction();
+                  setMoreOpen(false);
+                }}
                 disabled={!isConnected || isExecuting || !isTransactionActive}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset disabled:opacity-50"
               >
@@ -253,7 +270,10 @@ export function EditorToolbar({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => { onClear(); setMoreOpen(false); }}
+                onClick={() => {
+                  onClear();
+                  setMoreOpen(false);
+                }}
                 className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
               >
                 <Trash2 className="w-4 h-4 shrink-0" />
@@ -263,7 +283,10 @@ export function EditorToolbar({
                 <button
                   type="button"
                   role="menuitem"
-                  onClick={() => { onCancel(); setMoreOpen(false); }}
+                  onClick={() => {
+                    onCancel();
+                    setMoreOpen(false);
+                  }}
                   className="flex items-center gap-2 px-3 py-2.5 text-left text-sm min-h-[44px] hover:bg-surface-hover w-full focus-visible:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
                 >
                   <Square className="w-4 h-4 shrink-0" />

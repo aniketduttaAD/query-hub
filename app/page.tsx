@@ -44,7 +44,8 @@ export default function Page() {
   const statusClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const check = () => setIsLg(typeof window !== 'undefined' && window.innerWidth >= LG_BREAKPOINT);
+    const check = () =>
+      setIsLg(typeof window !== 'undefined' && window.innerWidth >= LG_BREAKPOINT);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
@@ -99,7 +100,8 @@ export default function Page() {
         <Tab value="connections" icon={<Database className="w-4 h-4 shrink-0" />}>
           Connections
         </Tab>
-        {(activeConnection && !activeConnection.isDefault) || (activeConnection?.isDefault && defaultUnlocked) ? (
+        {(activeConnection && !activeConnection.isDefault) ||
+        (activeConnection?.isDefault && defaultUnlocked) ? (
           <Tab value="explorer" icon={<FolderTree className="w-4 h-4 shrink-0" />}>
             Explorer
           </Tab>
@@ -115,7 +117,8 @@ export default function Page() {
         </ErrorBoundary>
       </TabPanel>
 
-      {((activeConnection && !activeConnection.isDefault) || (activeConnection?.isDefault && defaultUnlocked)) ? (
+      {(activeConnection && !activeConnection.isDefault) ||
+      (activeConnection?.isDefault && defaultUnlocked) ? (
         <TabPanel value="explorer" className="flex-1 overflow-hidden min-h-0">
           <ErrorBoundary>
             <DatabaseExplorer />
@@ -133,7 +136,10 @@ export default function Page() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden min-h-0">
-      <header className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-primary text-white shadow-md z-10 shrink-0" role="banner">
+      <header
+        className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2 sm:py-3 bg-primary text-white shadow-md z-10 shrink-0"
+        role="banner"
+      >
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-lg sm:rounded-xl shadow-sm shrink-0">
             <Image
@@ -147,7 +153,9 @@ export default function Page() {
           </div>
           <div className="flex flex-col min-w-0">
             <h1 className="text-base sm:text-lg font-bold leading-tight truncate">QueryHub</h1>
-            <span className="text-xs opacity-80 hidden sm:inline">Learn SQL & MongoDB interactively</span>
+            <span className="text-xs opacity-80 hidden sm:inline">
+              Learn SQL & MongoDB interactively
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
@@ -188,11 +196,7 @@ export default function Page() {
         <div
           ref={containerRef}
           className="flex-1 flex flex-col p-2 sm:p-4 min-w-0 overflow-hidden"
-          style={
-            isLg
-              ? { width: `calc(100% - ${sidebarWidth}px)` }
-              : undefined
-          }
+          style={isLg ? { width: `calc(100% - ${sidebarWidth}px)` } : undefined}
         >
           <div className="min-h-0 flex-shrink-0" style={{ height: `${editorHeight}%` }}>
             <ErrorBoundary>
@@ -282,14 +286,15 @@ export default function Page() {
                 <X className="w-5 h-5" aria-hidden />
               </button>
             </div>
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {sidebarContent}
-            </div>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">{sidebarContent}</div>
           </div>
         </>
       )}
 
-      <footer className="px-3 sm:px-6 py-2 bg-surface border-t border-border text-xs sm:text-sm text-text-muted flex flex-wrap items-center justify-between gap-2 shrink-0" role="contentinfo">
+      <footer
+        className="px-3 sm:px-6 py-2 bg-surface border-t border-border text-xs sm:text-sm text-text-muted flex flex-wrap items-center justify-between gap-2 shrink-0"
+        role="contentinfo"
+      >
         <span className="truncate">QueryHub - A learning environment for SQL and MongoDB</span>
         <span className="flex items-center gap-1 shrink-0">
           Status:{' '}

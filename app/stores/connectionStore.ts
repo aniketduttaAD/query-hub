@@ -44,6 +44,74 @@ type ConnectionPersist = (
   options: PersistOptions<ConnectionState, { connections: Connection[] }>,
 ) => StateCreator<ConnectionState>;
 
+let cleanupFunction: (() => void) | null = null;
+
+const setupCleanupHandlers = (
+  disconnect: () => Promise<void>,
+  sessionId: string,
+  signingKey: string,
+) => {
+  if (typeof window === 'undefined') return;
+
+  // Clean up previous handlers if they exist
+  if (cleanupFunction) {
+    cleanupFunction();
+    cleanupFunction = null;
+  }
+
+  // Send keepalive every 5 minutes to prevent timeout (2-hour timeout / 24 = safe margin)
+  const keepaliveInterval = setInterval(
+    async () => {
+      try {
+        await api.sessionKeepalive(sessionId, signingKey);
+        logger.debug('Keepalive sent successfully');
+      } catch (error) {
+        logger.error('Keepalive failed', error);
+      }
+    },
+    5 * 60 * 1000,
+  ); // 5 minutes
+
+  const handleBeforeUnload = () => {
+    // Synchronous disconnect using beacon for reliability when tab closes
+    navigator.sendBeacon(
+      '/api/connections/disconnect',
+      JSON.stringify({
+        sessionId,
+        signingKey,
+      }),
+    );
+  };
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      // Send keepalive when tab is hidden to maintain session
+      navigator.sendBeacon(
+        '/api/connections/keepalive',
+        JSON.stringify({
+          sessionId,
+          signingKey,
+          timestamp: Date.now(),
+        }),
+      );
+    }
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Store cleanup function
+  cleanupFunction = () => {
+    if (keepaliveInterval) {
+      clearInterval(keepaliveInterval);
+    }
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+
+  return cleanupFunction;
+};
+
 export const useConnectionStore = create<ConnectionState>()(
   (persist as ConnectionPersist)(
     (set, get) => ({
@@ -153,8 +221,7 @@ export const useConnectionStore = create<ConnectionState>()(
 
         try {
           const userId = connection.type === 'mongodb' ? undefined : getOrCreateSessionId();
-          const useDefaultDatabase =
-            connection.isDefault && !customUrl && !connection.encryptedUrl;
+          const useDefaultDatabase = connection.isDefault && !customUrl && !connection.encryptedUrl;
           const url =
             customUrl ||
             (connection.encryptedUrl
@@ -170,13 +237,7 @@ export const useConnectionStore = create<ConnectionState>()(
             return;
           }
 
-          const result = await api.connect(
-            connection.type,
-            url,
-            userId,
-            true,
-            useDefaultDatabase,
-          );
+          const result = await api.connect(connection.type, url, userId, true, useDefaultDatabase);
 
           if (result.success) {
             set((state) => ({
@@ -198,6 +259,10 @@ export const useConnectionStore = create<ConnectionState>()(
                 c.id === connectionId ? { ...c, lastUsed: Date.now() } : c,
               ),
             }));
+
+            if (result.signingKey) {
+              setupCleanupHandlers(get().disconnect, result.sessionId, result.signingKey);
+            }
           } else {
             set({
               connectionStatus: 'error',
@@ -216,6 +281,12 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       disconnect: async () => {
+        // Clean up handlers first
+        if (cleanupFunction) {
+          cleanupFunction();
+          cleanupFunction = null;
+        }
+
         const { activeConnection } = get();
         if (activeConnection?.sessionId) {
           try {

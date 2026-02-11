@@ -29,7 +29,11 @@ function AccordionItem({ title, children, defaultOpen = false }: AccordionItemPr
         )}
       </button>
       {isOpen && (
-        <div id={contentId} className="px-4 pb-4 text-sm text-text-secondary space-y-3 leading-relaxed" role="region">
+        <div
+          id={contentId}
+          className="px-4 pb-4 text-sm text-text-secondary space-y-3 leading-relaxed"
+          role="region"
+        >
           {children}
         </div>
       )}

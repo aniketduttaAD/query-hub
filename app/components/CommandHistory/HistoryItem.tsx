@@ -60,7 +60,10 @@ export function HistoryItem({ entry, onRerun, onDelete }: HistoryItemProps) {
         </div>
       </div>
 
-      <pre className="text-xs sm:text-sm font-mono bg-surface-hover rounded p-2 overflow-x-auto whitespace-pre-wrap break-words leading-relaxed" style={{ wordBreak: 'break-word' }}>
+      <pre
+        className="text-xs sm:text-sm font-mono bg-surface-hover rounded p-2 overflow-x-auto whitespace-pre-wrap break-words leading-relaxed"
+        style={{ wordBreak: 'break-word' }}
+      >
         {truncatedQuery}
       </pre>
 

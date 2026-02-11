@@ -76,7 +76,6 @@ const reviveMongoTypes = (value: unknown): unknown => {
   if (value && typeof value === 'object') {
     const obj = value as Record<string, unknown>;
 
-    // Internal markers for special MongoDB types inserted during parsing
     if (Object.keys(obj).length === 1 && typeof obj.__$oid === 'string') {
       try {
         return new ObjectId(obj.__$oid);
@@ -125,7 +124,6 @@ export function parseMongoArgs(argsStr: string): unknown[] {
   try {
     let normalized = argsStr.trim();
 
-    // Convert regex literals /pattern/flags into a JSON-friendly marker object.
     normalized = normalized.replace(
       /\/((?:[^/\\]|\\.)+)\/([gimsu]*)(?=\s*[,}\]]|$)/g,
       (_match, pattern, flags) => {
@@ -135,23 +133,29 @@ export function parseMongoArgs(argsStr: string): unknown[] {
       },
     );
 
-    // Convert ObjectId("...") into a marker that we later revive to a real ObjectId instance.
     normalized = normalized.replace(
-      /ObjectId\s*\(\s*["']([^"']+)["']\s*\)/g,
+      /ObjectId\s*\(\s*["']([^"']+)["']\s*\)/gi,
       (_match, id) => `{"__$oid":"${id}"}`,
     );
 
-    // Convert ISODate("...") into a marker we later revive to a JS Date.
     normalized = normalized.replace(
-      /ISODate\s*\(\s*["']([^"']+)["']\s*\)/g,
+      /ISODate\s*\(\s*["']([^"']+)["']\s*\)/gi,
       (_match, date) => `{"__$date":"${date}"}`,
     );
 
-    // Convert NumberLong("...") into a marker we later revive to a Long instance.
     normalized = normalized.replace(
-      /NumberLong\s*\(\s*["']?(\d+)["']?\s*\)/g,
+      /new\s+Date\s*\(\s*["']([^"']+)["']\s*\)/gi,
+      (_match, date) => `{"__$date":"${date}"}`,
+    );
+
+    normalized = normalized.replace(
+      /NumberLong\s*\(\s*["']?(\d+)["']?\s*\)/gi,
       (_match, num) => `{"__$numberLong":"${num}"}`,
     );
+
+    normalized = normalized.replace(/NumberInt\s*\(\s*(\d+)\s*\)/gi, '$1');
+
+    normalized = normalized.replace(/NumberDecimal\s*\(\s*["']?([0-9.]+)["']?\s*\)/gi, '"$1"');
 
     normalized = normalized.replace(/'([^'\\]*(\\.[^'\\]*)*)'/g, (_match, content) => {
       return `"${content.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -213,8 +217,9 @@ export function parseMongoArgs(argsStr: string): unknown[] {
     }
   } catch (e) {
     if (argsStr.trim() === '{}') return [{}];
+    if (argsStr.trim() === '[]') return [[]];
     throw new Error(
-      `Failed to parse query arguments: ${argsStr}. Error: ${
+      `Failed to parse query arguments: ${argsStr.substring(0, 100)}${argsStr.length > 100 ? '...' : ''}. Error: ${
         e instanceof Error ? e.message : String(e)
       }`,
     );

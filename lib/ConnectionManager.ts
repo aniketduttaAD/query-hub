@@ -6,6 +6,12 @@ import { logger } from './logger';
 class ConnectionManager {
   private sessions: Map<string, Session> = new Map();
   private userSessions: Map<string, string> = new Map();
+  private sessionTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  // Sessions stay alive indefinitely while tab is open with keepalive
+  // Only timeout if no activity for 2 hours (covers tab sleep/suspend scenarios)
+  private readonly SESSION_IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+  private readonly SESSION_CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   async createSession(
     type: DatabaseType,
@@ -139,6 +145,12 @@ class ConnectionManager {
       this.userSessions.set(userId, sessionId);
     }
 
+    this.resetSessionTimeout(sessionId);
+
+    if (!this.cleanupInterval) {
+      this.startCleanupInterval();
+    }
+
     logger.info('Session created', { sessionId, type, userId, userDatabase });
     return { sessionId, serverVersion, signingKey, userDatabase };
   }
@@ -147,8 +159,72 @@ class ConnectionManager {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.lastActivity = new Date();
+      this.resetSessionTimeout(sessionId);
     }
     return session;
+  }
+
+  private resetSessionTimeout(sessionId: string): void {
+    const existingTimeout = this.sessionTimeouts.get(sessionId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      this.handleSessionTimeout(sessionId);
+    }, this.SESSION_IDLE_TIMEOUT_MS);
+
+    this.sessionTimeouts.set(sessionId, timeout);
+  }
+
+  private async handleSessionTimeout(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    const idleTime = Date.now() - session.lastActivity.getTime();
+
+    if (idleTime >= this.SESSION_IDLE_TIMEOUT_MS) {
+      logger.info('Session timed out due to inactivity', {
+        sessionId,
+        idleMinutes: Math.floor(idleTime / 60000),
+      });
+      await this.closeSession(sessionId);
+    }
+  }
+
+  private startCleanupInterval(): void {
+    if (this.cleanupInterval) return;
+
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupIdleSessions();
+    }, this.SESSION_CLEANUP_INTERVAL_MS);
+
+    logger.info('Session cleanup interval started');
+  }
+
+  private stopCleanupInterval(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+      logger.info('Session cleanup interval stopped');
+    }
+  }
+
+  private async cleanupIdleSessions(): Promise<void> {
+    const now = Date.now();
+    const sessionsToClose: string[] = [];
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      const idleTime = now - session.lastActivity.getTime();
+      if (idleTime >= this.SESSION_IDLE_TIMEOUT_MS) {
+        sessionsToClose.push(sessionId);
+      }
+    }
+
+    for (const sessionId of sessionsToClose) {
+      logger.info('Cleaning up idle session', { sessionId });
+      await this.closeSession(sessionId);
+    }
   }
 
   setSessionAllowDestructive(sessionId: string, allow: boolean): boolean {
@@ -162,6 +238,12 @@ class ConnectionManager {
   async closeSession(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session) {
+      const existingTimeout = this.sessionTimeouts.get(sessionId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        this.sessionTimeouts.delete(sessionId);
+      }
+
       try {
         await session.adapter.disconnect();
       } catch (error) {
@@ -177,6 +259,10 @@ class ConnectionManager {
       }
 
       logger.info('Session closed', { sessionId });
+
+      if (this.sessions.size === 0) {
+        this.stopCleanupInterval();
+      }
     }
   }
 
@@ -189,9 +275,45 @@ class ConnectionManager {
   }
 
   async closeAllSessions(): Promise<void> {
+    this.stopCleanupInterval();
+
+    for (const timeout of this.sessionTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.sessionTimeouts.clear();
+
     for (const [id] of this.sessions) {
       await this.closeSession(id);
     }
+  }
+
+  getActiveSessionCount(): number {
+    return this.sessions.size;
+  }
+
+  getSessionStats(): {
+    totalSessions: number;
+    activeSessions: number;
+    idleSessions: number;
+  } {
+    const now = Date.now();
+    let activeSessions = 0;
+    let idleSessions = 0;
+
+    for (const session of this.sessions.values()) {
+      const idleTime = now - session.lastActivity.getTime();
+      if (idleTime < 5 * 60 * 1000) {
+        activeSessions++;
+      } else {
+        idleSessions++;
+      }
+    }
+
+    return {
+      totalSessions: this.sessions.size,
+      activeSessions,
+      idleSessions,
+    };
   }
 }
 

@@ -59,7 +59,6 @@ const getDeprecatedCollectionOperationMessage = (
   }
 };
 
-
 export class MongoAdapter implements DatabaseAdapter {
   private client: MongoClient | null = null;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -127,15 +126,100 @@ export class MongoAdapter implements DatabaseAdapter {
     database?: string,
     options?: QueryOptions,
   ): Promise<QueryResult> {
-    if (!this.client) throw new Error('Not connected');
+    if (!this.client) {
+      throw new Error('Database connection not established. Please connect to a database first.');
+    }
+
+    if (!query || !query.trim()) {
+      throw new Error('Query cannot be empty. Please provide a valid MongoDB query.');
+    }
 
     const startTime = Date.now();
-    const parsed = parseMongoQuery(query);
+    let parsed;
+
+    try {
+      parsed = parseMongoQuery(query);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Query parsing failed: ${errorMessage}`);
+    }
+
     const effectiveDb = parsed.database || database;
     const db = this.client.db(effectiveDb || undefined);
     const timeoutMs = DEFAULT_QUERY_TIMEOUT_MS;
     const session = this.transactionSession ?? undefined;
 
+    let result: Document[] = [];
+    let rowCount = 0;
+    let simulatedMessage: string | undefined;
+
+    let earlyReturn: QueryResult | null = null;
+
+    try {
+      earlyReturn = await this.executeQueryInternal(
+        parsed,
+        effectiveDb,
+        db,
+        timeoutMs,
+        session,
+        options,
+        (res, count, simMsg) => {
+          result = res;
+          rowCount = count;
+          simulatedMessage = simMsg;
+        },
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('timed out')) {
+          throw new Error(
+            `Query execution timed out after ${timeoutMs}ms. Try simplifying your query or adding indexes.`,
+          );
+        }
+        if (error.message.includes('not authorized')) {
+          throw new Error(
+            `Authorization failed: ${error.message}. Check your database permissions.`,
+          );
+        }
+        if (error.message.includes('ns not found') || error.message.includes('NamespaceNotFound')) {
+          throw new Error(
+            `Collection or database not found. Make sure the collection exists or will be created on first insert.`,
+          );
+        }
+        throw error;
+      }
+      throw new Error(`Query execution failed: ${String(error)}`);
+    }
+
+    if (earlyReturn) {
+      return earlyReturn;
+    }
+
+    const columns = this.inferColumns(result);
+
+    const queryResult: QueryResult = {
+      rows: result as Record<string, unknown>[],
+      columns,
+      rowCount,
+      executionTime: Date.now() - startTime,
+    };
+
+    if (simulatedMessage) {
+      (queryResult.rows[0] as Record<string, unknown>).message = simulatedMessage;
+    }
+
+    return queryResult;
+  }
+
+  private async executeQueryInternal(
+    parsed: ReturnType<typeof parseMongoQuery>,
+    effectiveDb: string | undefined,
+    db: ReturnType<NonNullable<typeof this.client>['db']>,
+    timeoutMs: number,
+    session: ClientSession | undefined,
+    options: QueryOptions | undefined,
+    setResult: (result: Document[], rowCount: number, simulatedMessage?: string) => void,
+  ): Promise<QueryResult | null> {
     let result: Document[] = [];
     let rowCount = 0;
     let simulatedMessage: string | undefined;
@@ -188,11 +272,10 @@ export class MongoAdapter implements DatabaseAdapter {
           }
           case 'dropdatabase': {
             if (this.isDefaultConfig && !options?.allowDestructive) {
-              const simResult = this.simulateDestructiveOperation(
+              return this.simulateDestructiveOperation(
                 'dropDatabase',
                 `Database "${effectiveDb || 'current'}" would be dropped`,
               );
-              return simResult;
             }
             const dropped = await this.withTimeout(db.dropDatabase(), timeoutMs);
             result = [{ dropped }] as unknown as Document[];
@@ -205,11 +288,10 @@ export class MongoAdapter implements DatabaseAdapter {
               throw new Error('Missing collection name for dropCollection');
             }
             if (this.isDefaultConfig && !options?.allowDestructive) {
-              const simResult = this.simulateDestructiveOperation(
+              return this.simulateDestructiveOperation(
                 'dropCollection',
                 `Collection "${target}" would be dropped`,
               );
-              return simResult;
             }
             const dropped = await this.withTimeout(db.dropCollection(target), timeoutMs);
             result = [{ dropped }] as unknown as Document[];
@@ -330,11 +412,10 @@ export class MongoAdapter implements DatabaseAdapter {
 
           case 'drop': {
             if (this.isDefaultConfig && !options?.allowDestructive) {
-              const simResult = this.simulateDestructiveOperation(
+              return this.simulateDestructiveOperation(
                 'drop',
                 `Collection "${collectionName}" would be dropped`,
               );
-              return simResult;
             }
             const dropped = await this.withTimeout(collection.drop({ session }), timeoutMs);
             result = [{ dropped }] as unknown as Document[];
@@ -426,7 +507,30 @@ export class MongoAdapter implements DatabaseAdapter {
           }
 
           case 'insertmany': {
-            const docs = (parsed.args[0] as Document[]) || [];
+            let docs: Document[];
+
+            if (parsed.args.length === 0) {
+              throw new Error(
+                'insertMany requires at least one document. Usage: db.collection.insertMany([{doc1}, {doc2}])',
+              );
+            }
+
+            const firstArg = parsed.args[0];
+
+            if (Array.isArray(firstArg)) {
+              docs = firstArg.map((doc) => normalizeMongoDoc(doc));
+            } else if (parsed.args.length > 1) {
+              docs = parsed.args.map((doc) => normalizeMongoDoc(doc));
+            } else {
+              docs = [normalizeMongoDoc(firstArg)];
+            }
+
+            if (docs.length === 0) {
+              throw new Error(
+                'insertMany requires at least one document. Usage: db.collection.insertMany([{doc1}, {doc2}])',
+              );
+            }
+
             const insertResult = await this.withTimeout(
               collection.insertMany(docs, { session }),
               timeoutMs,
@@ -482,11 +586,10 @@ export class MongoAdapter implements DatabaseAdapter {
 
           case 'deleteone': {
             if (this.isDefaultConfig && !options?.allowDestructive) {
-              const simResult = this.simulateDestructiveOperation(
+              return this.simulateDestructiveOperation(
                 'deleteOne',
                 `One document matching the filter would be deleted`,
               );
-              return simResult;
             }
             const filter = normalizeMongoDoc(parsed.args[0]);
             const deleteResult = await this.withTimeout(
@@ -505,11 +608,10 @@ export class MongoAdapter implements DatabaseAdapter {
 
           case 'deletemany': {
             if (this.isDefaultConfig && !options?.allowDestructive) {
-              const simResult = this.simulateDestructiveOperation(
+              return this.simulateDestructiveOperation(
                 'deleteMany',
                 `All documents matching the filter would be deleted`,
               );
-              return simResult;
             }
             const filter = normalizeMongoDoc(parsed.args[0]);
             const deleteResult = await this.withTimeout(
@@ -679,20 +781,8 @@ export class MongoAdapter implements DatabaseAdapter {
       }
     }
 
-    const columns = this.inferColumns(result);
-
-    const queryResult: QueryResult = {
-      rows: result as Record<string, unknown>[],
-      columns,
-      rowCount,
-      executionTime: Date.now() - startTime,
-    };
-
-    if (simulatedMessage) {
-      (queryResult.rows[0] as Record<string, unknown>).message = simulatedMessage;
-    }
-
-    return queryResult;
+    setResult(result, rowCount, simulatedMessage);
+    return null;
   }
 
   private inferColumns(docs: Document[]): ColumnInfo[] {
@@ -901,10 +991,9 @@ export class MongoAdapter implements DatabaseAdapter {
     this.healthCheckInterval = setInterval(async () => {
       if (!this.client) return;
       try {
-        await this.client.db().admin().ping();
+        await this.withTimeout(this.client.db().admin().ping(), 5000);
       } catch (error) {
         logger.error('MongoDB health check failed', error);
-        await this.disconnect();
       }
     }, 60_000);
   }

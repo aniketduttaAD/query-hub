@@ -37,10 +37,7 @@ export async function POST(request: Request) {
   const { type, connectionUrl, userId, isIsolated, useDefaultDatabase } = body.data ?? {};
 
   if (!type) {
-    return jsonResponse(
-      { success: false, error: 'Missing type' },
-      { status: 400, headers },
-    );
+    return jsonResponse({ success: false, error: 'Missing type' }, { status: 400, headers });
   }
 
   let effectiveConnectionUrl: string;
@@ -64,7 +61,10 @@ export async function POST(request: Request) {
   } else {
     if (!connectionUrl) {
       return jsonResponse(
-        { success: false, error: 'Missing connectionUrl (or set useDefaultDatabase for default DB)' },
+        {
+          success: false,
+          error: 'Missing connectionUrl (or set useDefaultDatabase for default DB)',
+        },
         { status: 400, headers },
       );
     }

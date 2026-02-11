@@ -228,11 +228,11 @@ export function DefaultDatabasesList({
                       {connection.type}
                     </span>
                     {isActive && (
-                    <StatusBadge
-                      status={connectionStatus}
-                      isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
-                    />
-                  )}
+                      <StatusBadge
+                        status={connectionStatus}
+                        isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
+                      />
+                    )}
                   </div>
                 </div>
 

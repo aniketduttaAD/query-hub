@@ -28,16 +28,19 @@ const statusTextColors: Record<ConnectionStatus | MessageType, string> = {
   info: 'text-info',
 };
 
-export function StatusBadge({ status, children, pulse = false, isExtendedSession = false }: StatusBadgeProps) {
+export function StatusBadge({
+  status,
+  children,
+  pulse = false,
+  isExtendedSession = false,
+}: StatusBadgeProps) {
   const shouldPulse = pulse || status === 'connecting';
   const useExtendedColors = status === 'connected' && isExtendedSession;
   const dotColor = useExtendedColors ? 'bg-orange-500' : statusColors[status];
   const textColor = useExtendedColors ? 'text-orange-600' : statusTextColors[status];
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs font-medium ${textColor}`}
-    >
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${textColor}`}>
       <span className="relative flex h-2 w-2">
         {shouldPulse && (
           <span

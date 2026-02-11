@@ -67,7 +67,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4 p-4 sm:p-6 border-b border-border">
-          <h2 id={MODAL_TITLE_ID} className="text-lg sm:text-xl font-semibold text-primary leading-tight">
+          <h2
+            id={MODAL_TITLE_ID}
+            className="text-lg sm:text-xl font-semibold text-primary leading-tight"
+          >
             {title}
           </h2>
           <Button

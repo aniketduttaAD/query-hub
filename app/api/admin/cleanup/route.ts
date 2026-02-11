@@ -48,10 +48,7 @@ export async function POST(request: Request) {
 
   try {
     await performCleanup();
-    return jsonResponse(
-      { success: true, message: 'Cleanup completed successfully' },
-      { headers },
-    );
+    return jsonResponse({ success: true, message: 'Cleanup completed successfully' }, { headers });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Cleanup failed';
     return jsonResponse({ success: false, error: message }, { status: 500, headers });

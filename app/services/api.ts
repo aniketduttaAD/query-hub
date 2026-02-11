@@ -119,6 +119,23 @@ export const api = {
     return handleResponse<{ success: boolean }>(response);
   },
 
+  async sessionKeepalive(sessionId: string, signingKey: string): Promise<{ success: boolean }> {
+    const body = { sessionId, timestamp: Date.now() };
+    const timestamp = Date.now().toString();
+    const signature = await signPayload(signingKey, body, timestamp);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-timestamp': timestamp,
+      'x-signature': signature,
+    };
+    const response = await fetch(`${API_BASE}/connections/keepalive`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    return handleResponse<{ success: boolean }>(response);
+  },
+
   async executeQuery(
     sessionId: string,
     query: string,

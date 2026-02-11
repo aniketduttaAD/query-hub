@@ -73,11 +73,11 @@ export function ConnectionList() {
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-text-secondary capitalize">{connection.type}</span>
                   {isActive && (
-                  <StatusBadge
-                    status={connectionStatus}
-                    isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
-                  />
-                )}
+                    <StatusBadge
+                      status={connectionStatus}
+                      isExtendedSession={Boolean(activeConnection?.isDefault && defaultUnlocked)}
+                    />
+                  )}
                 </div>
                 {connection.lastUsed && (
                   <div className="flex items-center gap-1 mt-1 text-xs text-text-muted">
@@ -94,9 +94,17 @@ export function ConnectionList() {
                   onClick={() => handleConnect(connection)}
                   isLoading={isConnecting}
                   title={isActive ? 'Disconnect' : 'Connect'}
-                  aria-label={isActive ? `Disconnect from ${connection.name}` : `Connect to ${connection.name}`}
+                  aria-label={
+                    isActive
+                      ? `Disconnect from ${connection.name}`
+                      : `Connect to ${connection.name}`
+                  }
                 >
-                  {isActive ? <Square className="w-3.5 h-3.5" aria-hidden /> : <Play className="w-3.5 h-3.5" aria-hidden />}
+                  {isActive ? (
+                    <Square className="w-3.5 h-3.5" aria-hidden />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" aria-hidden />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
