@@ -24,10 +24,10 @@ export function validateMongo(monaco: Monaco, model: editor.ITextModel): editor.
       }
     }
 
-    if (trimmed.startsWith('db.') && !trimmed.match(/db\.\w+\.\w+/)) {
+    if (trimmed.startsWith('db.') && !trimmed.match(/db\.\w+[.(]/)) {
       markers.push({
         severity: monaco.MarkerSeverity.Error,
-        message: 'Invalid MongoDB query: Expected db.collection.method()',
+        message: 'Invalid MongoDB query: Expected db.collection.method() or db.method()',
         startLineNumber: lineIndex + 1,
         startColumn: 1,
         endLineNumber: lineIndex + 1,
@@ -218,11 +218,13 @@ export function validateMongo(monaco: Monaco, model: editor.ITextModel): editor.
     trimmedText &&
     !trimmedText.startsWith('db.') &&
     !trimmedText.startsWith('//') &&
-    !trimmedText.startsWith('/*')
+    !trimmedText.startsWith('/*') &&
+    !/^\s*(show|use)\s+\w/i.test(trimmedText)
   ) {
     markers.push({
       severity: monaco.MarkerSeverity.Error,
-      message: 'MongoDB query must start with db.',
+      message:
+        'MongoDB query must start with db. (or use shell commands: show dbs, show collections, use <db>)',
       startLineNumber: 1,
       startColumn: 1,
       endLineNumber: 1,

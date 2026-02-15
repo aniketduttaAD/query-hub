@@ -496,8 +496,14 @@ export class MongoAdapter implements DatabaseAdapter {
 
           case 'insertone': {
             const doc = normalizeMongoDoc(parsed.args[0]);
+            const insertOptions =
+              parsed.args[1] != null &&
+              typeof parsed.args[1] === 'object' &&
+              !Array.isArray(parsed.args[1])
+                ? { ...normalizeMongoDoc(parsed.args[1]), session }
+                : { session };
             const insertResult = await this.withTimeout(
-              collection.insertOne(doc, { session }),
+              collection.insertOne(doc, insertOptions),
               timeoutMs,
             );
             result = [
@@ -520,10 +526,16 @@ export class MongoAdapter implements DatabaseAdapter {
             }
 
             const firstArg = parsed.args[0];
+            const hasOptionsArg =
+              Array.isArray(firstArg) &&
+              parsed.args.length >= 2 &&
+              parsed.args[1] != null &&
+              typeof parsed.args[1] === 'object' &&
+              !Array.isArray(parsed.args[1]);
 
             if (Array.isArray(firstArg)) {
               docs = firstArg.map((doc) => normalizeMongoDoc(doc));
-            } else if (parsed.args.length > 1) {
+            } else if (parsed.args.length > 1 && !hasOptionsArg) {
               docs = parsed.args.map((doc) => normalizeMongoDoc(doc));
             } else {
               docs = [normalizeMongoDoc(firstArg)];
@@ -535,8 +547,12 @@ export class MongoAdapter implements DatabaseAdapter {
               );
             }
 
+            const insertOptions = hasOptionsArg
+              ? { ...normalizeMongoDoc(parsed.args[1]), session }
+              : { session };
+
             const insertResult = await this.withTimeout(
-              collection.insertMany(docs, { session }),
+              collection.insertMany(docs, insertOptions),
               timeoutMs,
             );
             result = [
@@ -596,8 +612,14 @@ export class MongoAdapter implements DatabaseAdapter {
               );
             }
             const filter = normalizeMongoDoc(parsed.args[0]);
+            const deleteOptions =
+              parsed.args[1] != null &&
+              typeof parsed.args[1] === 'object' &&
+              !Array.isArray(parsed.args[1])
+                ? { ...normalizeMongoDoc(parsed.args[1]), session }
+                : { session };
             const deleteResult = await this.withTimeout(
-              collection.deleteOne(filter, { session }),
+              collection.deleteOne(filter, deleteOptions),
               timeoutMs,
             );
             result = [
@@ -618,8 +640,14 @@ export class MongoAdapter implements DatabaseAdapter {
               );
             }
             const filter = normalizeMongoDoc(parsed.args[0]);
+            const deleteOptions =
+              parsed.args[1] != null &&
+              typeof parsed.args[1] === 'object' &&
+              !Array.isArray(parsed.args[1])
+                ? { ...normalizeMongoDoc(parsed.args[1]), session }
+                : { session };
             const deleteResult = await this.withTimeout(
-              collection.deleteMany(filter, { session }),
+              collection.deleteMany(filter, deleteOptions),
               timeoutMs,
             );
             result = [
@@ -652,8 +680,76 @@ export class MongoAdapter implements DatabaseAdapter {
             break;
           }
 
+          case 'findoneandupdate': {
+            const filter = normalizeMongoDoc(parsed.args[0]);
+            const update = normalizeMongoDoc(parsed.args[1]);
+            const opts = normalizeMongoDoc(parsed.args[2]);
+            const doc = await this.withTimeout(
+              collection.findOneAndUpdate(filter, update, { ...opts, session }),
+              timeoutMs,
+            );
+            result = doc ? [doc] : [{ value: null }];
+            rowCount = 1;
+            break;
+          }
+
+          case 'findoneanddelete': {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
+              return this.simulateDestructiveOperation(
+                'findOneAndDelete',
+                `One document matching the filter would be deleted and returned`,
+              );
+            }
+            const filter = normalizeMongoDoc(parsed.args[0]);
+            const opts = normalizeMongoDoc(parsed.args[1]);
+            const doc = await this.withTimeout(
+              collection.findOneAndDelete(filter, { ...opts, session }),
+              timeoutMs,
+            );
+            result = doc ? [doc] : [{ value: null }];
+            rowCount = 1;
+            break;
+          }
+
+          case 'findoneandreplace': {
+            const filter = normalizeMongoDoc(parsed.args[0]);
+            const replacement = normalizeMongoDoc(parsed.args[1]);
+            const opts = normalizeMongoDoc(parsed.args[2]);
+            const doc = await this.withTimeout(
+              collection.findOneAndReplace(filter, replacement, { ...opts, session }),
+              timeoutMs,
+            );
+            result = doc ? [doc] : [{ value: null }];
+            rowCount = 1;
+            break;
+          }
+
+          case 'estimateddocumentcount': {
+            const count = await this.withTimeout(
+              collection.estimatedDocumentCount({ maxTimeMS: timeoutMs, session }),
+              timeoutMs,
+            );
+            result = [{ count }];
+            rowCount = 1;
+            break;
+          }
+
           case 'bulkwrite': {
             const ops = (parsed.args[0] as Document[]) || [];
+            if (this.isDefaultConfig && !options?.allowDestructive) {
+              const hasDestructive =
+                Array.isArray(ops) &&
+                ops.some((op) => {
+                  if (!op || typeof op !== 'object') return false;
+                  return 'deleteOne' in op || 'deleteMany' in op;
+                });
+              if (hasDestructive) {
+                return this.simulateDestructiveOperation(
+                  'bulkWrite',
+                  `Bulk write containing delete operations would be executed`,
+                );
+              }
+            }
             const bulkOptions = normalizeMongoDoc(parsed.args[1]);
             const bulkResult = await this.withTimeout(
               collection.bulkWrite(ops as unknown as Parameters<typeof collection.bulkWrite>[0], {
@@ -743,6 +839,12 @@ export class MongoAdapter implements DatabaseAdapter {
           }
 
           case 'dropindex': {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
+              return this.simulateDestructiveOperation(
+                'dropIndex',
+                `Index would be dropped from collection "${collectionName}"`,
+              );
+            }
             const indexName = parsed.args[0] ? String(parsed.args[0]) : '';
             if (!indexName) {
               throw new Error(

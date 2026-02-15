@@ -67,7 +67,7 @@ assert(
 );
 console.log('✓', q5);
 
-  const argsStr = '{}, { name: 1, _id: 0 }';
+const argsStr = '{}, { name: 1, _id: 0 }';
 const args = parseMongoArgs(argsStr);
 assert(Array.isArray(args) && args.length === 2, 'two args');
 assert(deepEqual(args[0], {}), 'first arg {}');

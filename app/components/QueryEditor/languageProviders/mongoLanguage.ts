@@ -3,6 +3,9 @@ import type { Monaco } from '@monaco-editor/react';
 const MONGO_METHODS = [
   'find',
   'findOne',
+  'findOneAndUpdate',
+  'findOneAndDelete',
+  'findOneAndReplace',
   'insertOne',
   'insertMany',
   'updateOne',
@@ -14,12 +17,16 @@ const MONGO_METHODS = [
   'countDocuments',
   'estimatedDocumentCount',
   'distinct',
+  'bulkWrite',
   'createIndex',
   'dropIndex',
   'listIndexes',
+  'getIndexes',
+  'stats',
   'drop',
   'createCollection',
   'dropCollection',
+  'dropDatabase',
 ];
 
 const MONGO_OPERATORS = [
@@ -92,6 +99,28 @@ const MONGO_SNIPPETS = [
     label: 'aggregate',
     insertText: 'db.${1:collection}.aggregate([${2:{$match: {}}}, ${3:{$group: {_id: "$field"}}}])',
     documentation: 'Aggregate pipeline',
+  },
+  {
+    label: 'findOneAndUpdate',
+    insertText: 'db.${1:collection}.findOneAndUpdate(${2:{filter}}, ${3:{$set: {field: "value"}}})',
+    documentation:
+      'Find a document and update it atomically, returning the original or updated document',
+  },
+  {
+    label: 'findOneAndDelete',
+    insertText: 'db.${1:collection}.findOneAndDelete(${2:{filter}})',
+    documentation: 'Find a document and delete it atomically, returning the deleted document',
+  },
+  {
+    label: 'findOneAndReplace',
+    insertText: 'db.${1:collection}.findOneAndReplace(${2:{filter}}, ${3:{replacement}})',
+    documentation:
+      'Find a document and replace it atomically, returning the original or new document',
+  },
+  {
+    label: 'bulkWrite',
+    insertText: 'db.${1:collection}.bulkWrite([${2:{ insertOne: { document: {} \\}}}])',
+    documentation: 'Execute multiple write operations in bulk',
   },
 ];
 
