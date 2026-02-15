@@ -4,16 +4,13 @@
  */
 
 export const DANGEROUS_SQL_PATTERNS: RegExp[] = [
-  // Statement injection / chaining
   /;\s*drop\s+table/i,
   /;\s*drop\s+database/i,
   /;\s*truncate/i,
   /;\s*delete\s+from/i,
   /;\s*--/i,
-  // Comments that could hide payloads
   /--/i,
   /\/\*[\s\S]*?\*\//i,
-  // DDL / privilege escalation
   /\bALTER\s+(DATABASE|SCHEMA|TABLE|USER|ROLE)\b/i,
   /\bCREATE\s+(DATABASE|SCHEMA|USER|ROLE)\b/i,
   /\bGRANT\b/i,

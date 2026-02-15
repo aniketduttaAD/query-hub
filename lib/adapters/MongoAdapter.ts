@@ -250,6 +250,23 @@ export class MongoAdapter implements DatabaseAdapter {
             rowCount = 1;
             break;
           }
+          case 'runcommand': {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
+              throw new Error(
+                'db.admin().runCommand() is only allowed when connected to your own database. Connect with your own MongoDB URL to run admin commands.',
+              );
+            }
+            const cmd = parsed.args[0] != null ? normalizeMongoDoc(parsed.args[0]) : {};
+            if (Object.keys(cmd).length === 0) {
+              throw new Error(
+                'db.admin().runCommand() requires a command document. Example: db.admin().runCommand({ listDatabases: 1 })',
+              );
+            }
+            const cmdResult = await this.withTimeout(admin.command(cmd, { session }), timeoutMs);
+            result = [cmdResult as unknown as Document];
+            rowCount = 1;
+            break;
+          }
           default:
             throw new Error(`Unsupported admin operation: ${parsed.operation}`);
         }
@@ -339,6 +356,23 @@ export class MongoAdapter implements DatabaseAdapter {
             const collections = await this.withTimeout(db.listCollections().toArray(), timeoutMs);
             result = collections.map((c) => ({ name: c.name })) as unknown as Document[];
             rowCount = result.length;
+            break;
+          }
+          case 'runcommand': {
+            if (this.isDefaultConfig && !options?.allowDestructive) {
+              throw new Error(
+                'db.runCommand() is only allowed when connected to your own database. Connect with your own MongoDB URL to run server/database commands (e.g. collMod, ping, listCollections).',
+              );
+            }
+            const cmd = parsed.args[0] != null ? normalizeMongoDoc(parsed.args[0]) : {};
+            if (Object.keys(cmd).length === 0) {
+              throw new Error(
+                'db.runCommand() requires a command document. Example: db.runCommand({ ping: 1 })',
+              );
+            }
+            const cmdResult = await this.withTimeout(db.command(cmd, { session }), timeoutMs);
+            result = [cmdResult as unknown as Document];
+            rowCount = 1;
             break;
           }
           default:
