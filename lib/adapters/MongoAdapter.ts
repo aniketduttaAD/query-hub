@@ -59,6 +59,16 @@ const getDeprecatedCollectionOperationMessage = (
   }
 };
 
+function asProjectionOption(
+  secondArg: unknown,
+): { projection: Record<string, unknown> } | Record<string, never> {
+  if (secondArg == null || typeof secondArg !== 'object' || Array.isArray(secondArg)) {
+    return {};
+  }
+  const doc = normalizeMongoDoc(secondArg);
+  return Object.keys(doc).length > 0 ? { projection: doc } : {};
+}
+
 export class MongoAdapter implements DatabaseAdapter {
   private client: MongoClient | null = null;
   private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
@@ -346,9 +356,8 @@ export class MongoAdapter implements DatabaseAdapter {
         switch (parsed.operation.toLowerCase()) {
           case 'find': {
             const filter = normalizeMongoDoc(parsed.args[0]);
-            const findOptions = normalizeMongoDoc(parsed.args[1]);
             const cursor = collection
-              .find(filter, { ...findOptions, session })
+              .find(filter, { session, ...asProjectionOption(parsed.args[1]) })
               .maxTimeMS(timeoutMs);
 
             let hasLimit = false;
@@ -376,15 +385,6 @@ export class MongoAdapter implements DatabaseAdapter {
               } else {
                 throw new Error(`Unsupported cursor method: ${chain.name}`);
               }
-            }
-
-            if (typeof findOptions.limit === 'number' && !hasLimit) {
-              cursor.limit(findOptions.limit);
-              hasLimit = true;
-            }
-            if (typeof findOptions.skip === 'number' && !hasSkip) {
-              cursor.skip(findOptions.skip);
-              hasSkip = true;
             }
 
             if (!hasLimit) {
@@ -426,7 +426,11 @@ export class MongoAdapter implements DatabaseAdapter {
           case 'findone': {
             const filter = normalizeMongoDoc(parsed.args[0]);
             const doc = await this.withTimeout(
-              collection.findOne(filter, { maxTimeMS: timeoutMs, session }),
+              collection.findOne(filter, {
+                maxTimeMS: timeoutMs,
+                session,
+                ...asProjectionOption(parsed.args[1]),
+              }),
               timeoutMs,
             );
             result = doc ? [doc] : [];
